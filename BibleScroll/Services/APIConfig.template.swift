@@ -4,6 +4,11 @@
 //
 //  API configuration - Store your API keys here
 //
+//  SETUP INSTRUCTIONS:
+//  1. Copy this file and rename it to "APIConfig.swift"
+//  2. Replace the placeholder values with your actual API keys
+//  3. APIConfig.swift is gitignored, so your keys stay private
+//
 
 import Foundation
 
@@ -15,7 +20,7 @@ enum APIConfig {
     
     /// Your API.Bible API key
     /// Get yours at: https://scripture.api.bible
-    static let apiBibleKey = "3FJ5w4ODGoClhSqqQbNrY"  // TODO: Replace with your full API key
+    static let apiBibleKey = "YOUR_API_BIBLE_KEY_HERE"
     
     /// API.Bible base URL
     static let apiBibleBaseURL = "https://api.scripture.api.bible/v1"
@@ -34,7 +39,6 @@ enum APIConfig {
     
     /// Your OpenAI API key
     /// Get yours at: https://platform.openai.com/api-keys
-    /// ⚠️ IMPORTANT: Replace with your own API key - never commit real keys to git!
     static let openAIKey = "YOUR_OPENAI_API_KEY_HERE"
     
     // MARK: - Optional Auth Configuration (for future use)
@@ -45,5 +49,4 @@ enum APIConfig {
     /// App identifier
     static let appBundleId = "com.yourcompany.BibleScroll"
 }
-
 
