@@ -7,6 +7,9 @@
 
 import SwiftUI
 
+// App Store link for sharing - UPDATE THIS when app is live
+private let appStoreLink = "YOUR_APP_STORE_LINK_HERE"
+
 // Button style used by action buttons and crown button
 struct FastPopButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -72,7 +75,7 @@ struct ActionButtonsView: View {
     }
     
     private var shareText: String {
-        "\"\(verse.text)\"\n\n— \(verse.reference)"
+        "\"\(verse.text)\"\n\n— \(verse.reference)\n\nFrom Bible Scroll app\n\(appStoreLink)"
     }
 }
 

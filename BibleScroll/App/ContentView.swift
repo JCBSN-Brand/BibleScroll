@@ -122,28 +122,6 @@ struct ContentView: View {
             ZStack {
                 MainScrollView(viewModel: viewModel)
                 
-                // TEMPORARY: Reset tutorial button for testing
-                VStack {
-                    Spacer()
-                    Button(action: {
-                        hasCompletedTutorial = false
-                        showingTutorial = true
-                    }) {
-                        Text("Reset Tutorial")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(
-                                Capsule()
-                                    .fill(Color.red)
-                                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-                            )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.bottom, 50)
-                }
-                
                 // Navigation bar - positioned at top with proper safe area
                 VStack(spacing: 0) {
                     // Header content
