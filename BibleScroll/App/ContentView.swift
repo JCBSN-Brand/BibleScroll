@@ -68,6 +68,33 @@ struct ContentView: View {
     @State private var showingTutorial = false
     
     var body: some View {
+        Group {
+            if showingTutorial {
+                // Full-screen tutorial for first-time users
+                TutorialView(isShowingTutorial: $showingTutorial)
+                    .transition(.opacity)
+            } else {
+                // Main app content
+                mainContent
+            }
+        }
+        .preferredColorScheme(.light)
+        .onAppear {
+            // Show tutorial on first launch
+            if !hasCompletedTutorial {
+                showingTutorial = true
+            }
+        }
+        .onChange(of: showingTutorial) { _, isShowing in
+            if !isShowing {
+                // Mark tutorial as completed when dismissed
+                hasCompletedTutorial = true
+            }
+        }
+    }
+    
+    // MARK: - Main Content View
+    private var mainContent: some View {
         GeometryReader { geometry in
             ZStack {
                 // Pure white background
@@ -83,7 +110,7 @@ struct ContentView: View {
                         hasCompletedTutorial = false
                         showingTutorial = true
                     }) {
-                        Text("Reset App")
+                        Text("Reset Tutorial")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 20)
@@ -192,29 +219,6 @@ struct ContentView: View {
         .onChange(of: selectedTranslation) { _, newTranslation in
             Task {
                 await viewModel.setTranslation(newTranslation)
-            }
-        }
-        .preferredColorScheme(.light)
-        .onAppear {
-            // Show tutorial on first launch
-            if !hasCompletedTutorial {
-                // Small delay to let the main view load first
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    showingTutorial = true
-                }
-            }
-        }
-        .overlay {
-            if showingTutorial {
-                TutorialView(isShowingTutorial: $showingTutorial)
-                    .transition(.opacity)
-                    .zIndex(100)
-            }
-        }
-        .onChange(of: showingTutorial) { _, isShowing in
-            if !isShowing {
-                // Mark tutorial as completed when dismissed
-                hasCompletedTutorial = true
             }
         }
     }

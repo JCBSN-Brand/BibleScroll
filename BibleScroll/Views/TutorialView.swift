@@ -2,412 +2,490 @@
 //  TutorialView.swift
 //  BibleScroll
 //
-//  Interactive tutorial overlay for first-time users
+//  Scroll-based tutorial for first-time users - styled like verses
 //
 
 import SwiftUI
 
-// MARK: - Tutorial Step Model
-enum TutorialStep: Int, CaseIterable {
-    case welcome
-    case scrolling
-    case likeButton
-    case commentButton
-    case shareButton
+// MARK: - Tutorial Card Model
+struct TutorialCard: Identifiable {
+    let id = UUID()
+    let mainText: String
+    let subtitleText: String
+    let buttonDemo: TutorialButtonDemo?
+}
+
+enum TutorialButtonDemo {
+    case like
+    case notes
+    case share
+    case crown
     case bookPicker
-    case translationPicker
-    case viewSaved
-    case complete
-    
-    var title: String {
-        switch self {
-        case .welcome:
-            return "Welcome to Bible Scroll"
-        case .scrolling:
-            return "Swipe to Explore"
-        case .likeButton:
-            return "Save Your Favorites"
-        case .commentButton:
-            return "Add Personal Notes"
-        case .shareButton:
-            return "Share the Word"
-        case .bookPicker:
-            return "Navigate Scripture"
-        case .translationPicker:
-            return "Choose Translation"
-        case .viewSaved:
-            return "Your Collection"
-        case .complete:
-            return "You're All Set!"
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .welcome:
-            return "Let's take a quick tour to help you get the most out of your Bible reading."
-        case .scrolling:
-            return "Swipe up or down to move through verses."
-        case .likeButton:
-            return "Tap to save verses you love.\nDouble-tap anywhere for a quick like!"
-        case .commentButton:
-            return "Add your personal reflections and study notes."
-        case .shareButton:
-            return "Share inspiring verses with others."
-        case .bookPicker:
-            return "Jump to any book and chapter."
-        case .translationPicker:
-            return "Switch Bible versions."
-        case .viewSaved:
-            return "View your saved verses and notes."
-        case .complete:
-            return "Start exploring God's Word!"
-        }
-    }
-    
-    var hasSpotlight: Bool {
-        switch self {
-        case .welcome, .scrolling, .complete:
-            return false
-        default:
-            return true
-        }
-    }
+    case translation
+    case favorites
+    case notesHeader
+    case search
 }
 
 // MARK: - Tutorial View
 struct TutorialView: View {
     @Binding var isShowingTutorial: Bool
-    @State private var currentStep: TutorialStep = .welcome
-    @State private var animateContent = false
-    @State private var pulseAnimation = false
+    @State private var currentPage = 0
+    @State private var hasScrolled = false
+    @State private var showScrollHint = true
     
-    // Button dimensions (must match ActionButtonsView)
-    private let buttonSize: CGFloat = 46
-    private let buttonSpacing: CGFloat = 20
-    private let trailingPadding: CGFloat = 16
-    private let bottomPadding: CGFloat = 120
+    private let cards: [TutorialCard] = [
+        TutorialCard(
+            mainText: "Welcome to Bible Scroll.",
+            subtitleText: "Let's take a quick tour to help you get the most out of your Bible reading.",
+            buttonDemo: nil
+        ),
+        TutorialCard(
+            mainText: "Swipe up to explore verses one at a time, just like this.",
+            subtitleText: "Each verse fills the screen so you can focus on God's Word.",
+            buttonDemo: nil
+        ),
+        TutorialCard(
+            mainText: "Save your favorite verses by tapping the heart.",
+            subtitleText: "Double-tap anywhere on a verse for a quick like!",
+            buttonDemo: .like
+        ),
+        TutorialCard(
+            mainText: "Add personal reflections and study notes to any verse.",
+            subtitleText: "Your thoughts will be saved and easy to find later.",
+            buttonDemo: .notes
+        ),
+        TutorialCard(
+            mainText: "Share inspiring verses with friends and family.",
+            subtitleText: "Spread God's Word with those you love.",
+            buttonDemo: .share
+        ),
+        TutorialCard(
+            mainText: "Tap the crown for AI-powered Bible study.",
+            subtitleText: "Get context, cross-references, and deeper insights.",
+            buttonDemo: .crown
+        ),
+        TutorialCard(
+            mainText: "Jump to any book and chapter in the Bible.",
+            subtitleText: "Navigate Scripture with ease.",
+            buttonDemo: .bookPicker
+        ),
+        TutorialCard(
+            mainText: "View your saved verses and notes anytime.",
+            subtitleText: "Build your personal collection of meaningful passages.",
+            buttonDemo: .favorites
+        ),
+        TutorialCard(
+            mainText: "You're all set!",
+            subtitleText: "Start exploring God's Word.",
+            buttonDemo: nil
+        )
+    ]
     
     var body: some View {
         GeometryReader { geometry in
-            let screenWidth = geometry.size.width
-            let screenHeight = geometry.size.height
-            let safeTop = geometry.safeAreaInsets.top
-            let safeBottom = geometry.safeAreaInsets.bottom
-            
             ZStack {
-                // Dimmed background
-                Color.black.opacity(0.75)
+                // White background
+                Color.white
                     .ignoresSafeArea()
                 
-                // Spotlight cutout
-                if currentStep.hasSpotlight {
-                    SpotlightCutout(
-                        spotlight: getSpotlight(
-                            screenWidth: screenWidth,
-                            screenHeight: screenHeight,
-                            safeTop: safeTop,
-                            safeBottom: safeBottom
-                        ),
-                        pulseAnimation: pulseAnimation
-                    )
-                    .ignoresSafeArea()
+                // Scrollable tutorial cards
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                            TutorialCardView(
+                                card: card,
+                                isLastCard: index == cards.count - 1,
+                                onComplete: completeTutorial
+                            )
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                        }
+                    }
+                    .scrollTargetLayout()
                 }
-                
-                // Tutorial text positioned near the element
-                TutorialText(
-                    step: currentStep,
-                    animateContent: animateContent,
-                    textPosition: getTextPosition(
-                        screenWidth: screenWidth,
-                        screenHeight: screenHeight,
-                        safeTop: safeTop,
-                        safeBottom: safeBottom
-                    ),
-                    onNext: nextStep,
-                    onSkip: skipTutorial
+                .scrollTargetBehavior(.paging)
+                .simultaneousGesture(
+                    DragGesture()
+                        .onChanged { _ in
+                            if !hasScrolled {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    hasScrolled = true
+                                    showScrollHint = false
+                                }
+                            }
+                        }
                 )
                 
-                // Swipe hint for scrolling step
-                if currentStep == .scrolling {
-                    SwipeGestureHint()
-                        .position(x: screenWidth / 2, y: screenHeight * 0.65)
+                // Scroll hint on first page
+                if showScrollHint {
+                    VStack {
+                        Spacer()
+                        ScrollHintView()
+                            .padding(.bottom, 80)
+                    }
+                    .transition(.opacity)
                 }
             }
         }
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.3)) {
-                animateContent = true
-            }
-            startPulseAnimation()
-        }
-    }
-    
-    private func getSpotlight(screenWidth: CGFloat, screenHeight: CGFloat, safeTop: CGFloat, safeBottom: CGFloat) -> SpotlightRect {
-        // Action button positions (from bottom-right)
-        // Buttons are 46x46 with 20 spacing, trailing 16, bottom 120
-        let actionX = screenWidth - trailingPadding - buttonSize / 2
-        
-        // Calculate Y positions for action buttons
-        // VStack: Like (top), Comment (middle), Share (bottom)
-        // Total height = 46 + 20 + 46 + 20 + 46 = 178
-        let vstackHeight = buttonSize * 3 + buttonSpacing * 2
-        let vstackBottom = screenHeight - bottomPadding + safeBottom
-        let vstackTop = vstackBottom - vstackHeight
-        
-        let likeY = vstackTop + buttonSize / 2
-        let commentY = likeY + buttonSize + buttonSpacing
-        let shareY = commentY + buttonSize + buttonSpacing
-        
-        // Nav bar button position
-        let navY = safeTop + 10 + 21 // padding + half button height
-        
-        switch currentStep {
-        case .likeButton:
-            return SpotlightRect(x: actionX, y: likeY, size: 54)
-            
-        case .commentButton:
-            return SpotlightRect(x: actionX, y: commentY, size: 54)
-            
-        case .shareButton:
-            return SpotlightRect(x: actionX, y: shareY, size: 54)
-            
-        case .bookPicker:
-            return SpotlightRect(x: screenWidth / 2, y: navY, width: 130, height: 44, cornerRadius: 22)
-            
-        case .translationPicker:
-            // After search button: 16 + 42 + 8 + 25
-            let transX: CGFloat = 16 + 42 + 8 + 25
-            return SpotlightRect(x: transX, y: navY, width: 52, height: 40, cornerRadius: 20)
-            
-        case .viewSaved:
-            // Notes + Favorites on right
-            let centerX = screenWidth - 16 - 42 - 4
-            return SpotlightRect(x: centerX, y: navY, width: 96, height: 48, cornerRadius: 24)
-            
-        default:
-            return SpotlightRect(x: 0, y: 0, size: 0)
-        }
-    }
-    
-    private func getTextPosition(screenWidth: CGFloat, screenHeight: CGFloat, safeTop: CGFloat, safeBottom: CGFloat) -> CGPoint {
-        switch currentStep {
-        case .welcome, .complete:
-            return CGPoint(x: screenWidth / 2, y: screenHeight / 2)
-            
-        case .scrolling:
-            return CGPoint(x: screenWidth / 2, y: screenHeight * 0.35)
-            
-        case .likeButton, .commentButton, .shareButton:
-            // Position text to the left of the action buttons, vertically centered with them
-            let actionX = screenWidth - trailingPadding - buttonSize / 2
-            let vstackHeight = buttonSize * 3 + buttonSpacing * 2
-            let vstackBottom = screenHeight - bottomPadding + safeBottom
-            let vstackCenter = vstackBottom - vstackHeight / 2
-            
-            return CGPoint(x: (screenWidth - actionX) / 2 + 20, y: vstackCenter)
-            
-        case .bookPicker:
-            // Below the book picker
-            return CGPoint(x: screenWidth / 2, y: safeTop + 120)
-            
-        case .translationPicker:
-            // Below and slightly right of translation
-            return CGPoint(x: screenWidth * 0.35, y: safeTop + 120)
-            
-        case .viewSaved:
-            // Below the buttons on the right
-            return CGPoint(x: screenWidth - 100, y: safeTop + 120)
-        }
-    }
-    
-    private func nextStep() {
-        let allSteps = TutorialStep.allCases
-        if let currentIndex = allSteps.firstIndex(of: currentStep),
-           currentIndex < allSteps.count - 1 {
-            withAnimation(.easeOut(duration: 0.15)) {
-                animateContent = false
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                currentStep = allSteps[currentIndex + 1]
-                withAnimation(.easeOut(duration: 0.2)) {
-                    animateContent = true
-                }
-            }
-        } else {
-            completeTutorial()
-        }
-    }
-    
-    private func skipTutorial() {
-        completeTutorial()
     }
     
     private func completeTutorial() {
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(.easeOut(duration: 0.3)) {
             isShowingTutorial = false
         }
     }
-    
-    private func startPulseAnimation() {
-        withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
-            pulseAnimation = true
-        }
-    }
 }
 
-// MARK: - Spotlight Rectangle
-struct SpotlightRect {
-    let x: CGFloat
-    let y: CGFloat
-    let width: CGFloat
-    let height: CGFloat
-    let cornerRadius: CGFloat
+// MARK: - Tutorial Card View (styled like verse)
+struct TutorialCardView: View {
+    let card: TutorialCard
+    let isLastCard: Bool
+    let onComplete: () -> Void
     
-    init(x: CGFloat, y: CGFloat, size: CGFloat) {
-        self.x = x
-        self.y = y
-        self.width = size
-        self.height = size
-        self.cornerRadius = size / 2
-    }
-    
-    init(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, cornerRadius: CGFloat) {
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.cornerRadius = cornerRadius
-    }
-}
-
-// MARK: - Spotlight Cutout
-struct SpotlightCutout: View {
-    let spotlight: SpotlightRect
-    let pulseAnimation: Bool
+    @State private var animateIn = false
     
     var body: some View {
         ZStack {
-            // Use Canvas to cut out the spotlight area
-            Canvas { context, size in
-                // Draw dim overlay
-                context.fill(
-                    Path(CGRect(origin: .zero, size: size)),
-                    with: .color(.black.opacity(0.75))
-                )
-                
-                // Cut out spotlight
-                context.blendMode = .destinationOut
-                let rect = CGRect(
-                    x: spotlight.x - spotlight.width / 2,
-                    y: spotlight.y - spotlight.height / 2,
-                    width: spotlight.width,
-                    height: spotlight.height
-                )
-                let path = RoundedRectangle(cornerRadius: spotlight.cornerRadius)
-                    .path(in: rect)
-                context.fill(path, with: .color(.white))
-            }
-            .compositingGroup()
+            Color.white
             
-            // Glow ring
-            RoundedRectangle(cornerRadius: spotlight.cornerRadius + 2)
-                .stroke(Color.white.opacity(0.9), lineWidth: 2)
-                .frame(width: spotlight.width + 4, height: spotlight.height + 4)
-                .position(x: spotlight.x, y: spotlight.y)
-                .scaleEffect(pulseAnimation ? 1.05 : 1.0)
-                .opacity(pulseAnimation ? 0.6 : 1.0)
+            VStack(spacing: 24) {
+                Spacer()
+                
+                // Button demo (if applicable) - shown above text
+                if let demo = card.buttonDemo {
+                    TutorialButtonDemoView(demo: demo)
+                        .padding(.bottom, 20)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 20)
+                        .animation(.easeOut(duration: 0.5).delay(0.2), value: animateIn)
+                }
+                
+                // Main text (styled exactly like verse text - Georgia font)
+                Text(card.mainText)
+                    .font(.custom("Georgia", size: dynamicFontSize(for: card.mainText)))
+                    .fontWeight(.regular)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(6)
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity)
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 15)
+                    .animation(.easeOut(duration: 0.4), value: animateIn)
+                
+                // Subtitle (styled exactly like verse reference - gray with tracking)
+                Text(card.subtitleText)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
+                    .tracking(1)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 40)
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 10)
+                    .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
+                
+                // Get Started button on last card
+                if isLastCard {
+                    Button(action: onComplete) {
+                        Text("Get Started")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 32)
+                            .padding(.vertical, 14)
+                            .background(
+                                Capsule()
+                                    .fill(Color.black)
+                            )
+                    }
+                    .padding(.top, 30)
+                    .opacity(animateIn ? 1 : 0)
+                    .scaleEffect(animateIn ? 1 : 0.9)
+                    .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
+                }
+                
+                Spacer()
+            }
+        }
+        .onAppear {
+            // Slight delay to trigger animation after view appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                animateIn = true
+            }
+        }
+        .onDisappear {
+            animateIn = false
+        }
+    }
+    
+    private func dynamicFontSize(for text: String) -> CGFloat {
+        let length = text.count
+        if length > 80 {
+            return 22
+        } else if length > 50 {
+            return 24
+        } else {
+            return 26
         }
     }
 }
 
-// MARK: - Tutorial Text
-struct TutorialText: View {
-    let step: TutorialStep
-    let animateContent: Bool
-    let textPosition: CGPoint
-    let onNext: () -> Void
-    let onSkip: () -> Void
+// MARK: - Tutorial Button Demo View
+struct TutorialButtonDemoView: View {
+    let demo: TutorialButtonDemo
     
     var body: some View {
-        VStack(spacing: 12) {
-            // Progress dots
-            HStack(spacing: 5) {
-                ForEach(0..<TutorialStep.allCases.count, id: \.self) { index in
-                    Circle()
-                        .fill(index == step.rawValue ? Color.white : Color.white.opacity(0.3))
-                        .frame(width: index == step.rawValue ? 7 : 5, height: index == step.rawValue ? 7 : 5)
-                }
-            }
-            .padding(.bottom, 4)
-            
-            // Title
-            Text(step.title)
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
-            
-            // Description
-            Text(step.description)
-                .font(.system(size: 15))
-                .foregroundColor(.white.opacity(0.85))
-                .multilineTextAlignment(.center)
-                .lineSpacing(3)
-            
-            // Buttons
-            HStack(spacing: 20) {
-                if step != .welcome && step != .complete {
-                    Button(action: onSkip) {
-                        Text("Skip")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white.opacity(0.5))
-                    }
-                }
-                
-                Button(action: onNext) {
-                    HStack(spacing: 5) {
-                        Text(step == .complete ? "Get Started" : (step == .welcome ? "Start" : "Next"))
-                            .font(.system(size: 15, weight: .semibold))
-                        if step != .complete {
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                    }
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 11)
-                    .background(Capsule().fill(Color.white))
-                }
-            }
-            .padding(.top, 8)
+        switch demo {
+        case .like:
+            LikeButtonDemo()
+        case .notes:
+            NotesButtonDemo()
+        case .share:
+            ShareButtonDemo()
+        case .crown:
+            CrownButtonDemo()
+        case .bookPicker:
+            BookPickerDemo()
+        case .favorites:
+            FavoritesDemo()
+        case .translation:
+            TranslationDemo()
+        case .notesHeader:
+            NotesHeaderDemo()
+        case .search:
+            SearchDemo()
         }
-        .padding(.horizontal, 24)
-        .frame(maxWidth: 280)
-        .position(textPosition)
-        .opacity(animateContent ? 1 : 0)
-        .offset(y: animateContent ? 0 : 15)
     }
 }
 
-// MARK: - Swipe Gesture Hint
-struct SwipeGestureHint: View {
+// MARK: - Button Demos
+struct LikeButtonDemo: View {
+    @State private var isLiked = false
+    @State private var showHeart = false
+    
+    var body: some View {
+        Button(action: {
+            isLiked.toggle()
+            if isLiked {
+                // Show heart animation
+                showHeart = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    showHeart = false
+                }
+            }
+            // Haptic
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
+        }) {
+            ZStack {
+                Image(isLiked ? "bxs-heart" : "bx-heart")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 28, height: 28)
+                    .foregroundColor(isLiked ? .red : .black)
+                    .padding(18)
+                    .background(
+                        Circle()
+                            .fill(Color.white)
+                            .shadow(color: Color.black.opacity(0.1), radius: 16, x: 0, y: 6)
+                    )
+                    .scaleEffect(isLiked ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isLiked)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct NotesButtonDemo: View {
+    @State private var hasNote = false
+    
+    var body: some View {
+        Button(action: {
+            hasNote.toggle()
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
+        }) {
+            Image(hasNote ? "bxs-message" : "bx-message")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 28, height: 28)
+                .foregroundColor(.black)
+                .padding(18)
+                .background(
+                    Circle()
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.1), radius: 16, x: 0, y: 6)
+                )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct ShareButtonDemo: View {
+    var body: some View {
+        Image("bx-send")
+            .renderingMode(.template)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 28, height: 28)
+            .foregroundColor(.black)
+            .padding(18)
+            .background(
+                Circle()
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.1), radius: 16, x: 0, y: 6)
+            )
+    }
+}
+
+struct CrownButtonDemo: View {
+    @State private var scale: CGFloat = 1.0
+    
+    var body: some View {
+        Image("crown-icon")
+            .renderingMode(.template)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 60, height: 60)
+            .foregroundColor(.black)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.1), radius: 16, x: 0, y: 6)
+            )
+            .scaleEffect(scale)
+            .onAppear {
+                // Subtle pulse animation
+                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                    scale = 1.05
+                }
+            }
+    }
+}
+
+struct BookPickerDemo: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("Genesis")
+                .font(.system(size: 14, weight: .medium))
+            Text("1")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(.gray)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.gray)
+        }
+        .foregroundColor(.black)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            Capsule()
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
+        )
+    }
+}
+
+struct FavoritesDemo: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            // Notes button
+            Image("bxs-message")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 20, height: 20)
+                .foregroundColor(.black)
+                .padding(12)
+                .background(
+                    Circle()
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+                )
+            
+            // Favorites button
+            Image("bxs-heart")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 20, height: 20)
+                .foregroundColor(.black)
+                .padding(12)
+                .background(
+                    Circle()
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+                )
+        }
+    }
+}
+
+struct TranslationDemo: View {
+    var body: some View {
+        Text("KJV")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(.black)
+            .padding(12)
+            .background(
+                Circle()
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+            )
+    }
+}
+
+struct NotesHeaderDemo: View {
+    var body: some View {
+        Image("bxs-message")
+            .renderingMode(.template)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 20, height: 20)
+            .foregroundColor(.black)
+            .padding(12)
+            .background(
+                Circle()
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+            )
+    }
+}
+
+struct SearchDemo: View {
+    var body: some View {
+        Image(systemName: "magnifyingglass")
+            .font(.system(size: 16, weight: .medium))
+            .foregroundColor(.black)
+            .padding(12)
+            .background(
+                Circle()
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+            )
+    }
+}
+
+// MARK: - Scroll Hint View
+struct ScrollHintView: View {
     @State private var animating = false
     
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "hand.point.up.fill")
-                .font(.system(size: 36))
-                .foregroundColor(.white)
-                .offset(y: animating ? -45 : 0)
-                .opacity(animating ? 0 : 1)
+        VStack(spacing: 8) {
+            Image(systemName: "chevron.up")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.gray.opacity(0.6))
+                .offset(y: animating ? -8 : 0)
             
-            Text("Swipe Up")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white.opacity(0.7))
+            Text("Swipe up to continue")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray.opacity(0.6))
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: false)) {
+            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
                 animating = true
             }
         }
@@ -415,11 +493,5 @@ struct SwipeGestureHint: View {
 }
 
 #Preview {
-    ZStack {
-        Color.white
-        Text("Content")
-    }
-    .overlay(
-        TutorialView(isShowingTutorial: .constant(true))
-    )
+    TutorialView(isShowingTutorial: .constant(true))
 }
