@@ -66,16 +66,22 @@ struct ContentView: View {
     // Tutorial state - persisted with @AppStorage
     @AppStorage("hasCompletedTutorial") private var hasCompletedTutorial = false
     @State private var showingTutorial = false
+    @State private var showMainContent = false
+    @State private var comingFromTutorial = false
     
     var body: some View {
-        Group {
+        ZStack {
+            // White background always visible
+            Color.white
+                .ignoresSafeArea()
+            
             if showingTutorial {
                 // Full-screen tutorial for first-time users
                 TutorialView(isShowingTutorial: $showingTutorial)
-                    .transition(.opacity)
             } else {
-                // Main app content
+                // Main app content with fade-in (only if coming from tutorial)
                 mainContent
+                    .opacity(showMainContent ? 1 : 0)
             }
         }
         .preferredColorScheme(.light)
@@ -83,12 +89,29 @@ struct ContentView: View {
             // Show tutorial on first launch
             if !hasCompletedTutorial {
                 showingTutorial = true
+            } else {
+                // If tutorial already completed, show content immediately
+                showMainContent = true
             }
         }
-        .onChange(of: showingTutorial) { _, isShowing in
-            if !isShowing {
+        .onChange(of: showingTutorial) { oldValue, isShowing in
+            if oldValue && !isShowing {
                 // Mark tutorial as completed when dismissed
                 hasCompletedTutorial = true
+                comingFromTutorial = true
+                
+                // Small delay then trigger slow fade-in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 2.5)) {
+                        showMainContent = true
+                    }
+                }
+            } else if !hasCompletedTutorial {
+                // Reset for tutorial
+                showMainContent = false
+            } else {
+                // Normal app open - show immediately
+                showMainContent = true
             }
         }
     }
@@ -97,10 +120,6 @@ struct ContentView: View {
     private var mainContent: some View {
         GeometryReader { geometry in
             ZStack {
-                // Pure white background
-                Color.white
-                    .ignoresSafeArea()
-                
                 MainScrollView(viewModel: viewModel)
                 
                 // TEMPORARY: Reset tutorial button for testing

@@ -13,6 +13,14 @@ struct TutorialCard: Identifiable {
     let mainText: String
     let subtitleText: String
     let buttonDemo: TutorialButtonDemo?
+    let isPaywall: Bool
+    
+    init(mainText: String, subtitleText: String, buttonDemo: TutorialButtonDemo? = nil, isPaywall: Bool = false) {
+        self.mainText = mainText
+        self.subtitleText = subtitleText
+        self.buttonDemo = buttonDemo
+        self.isPaywall = isPaywall
+    }
 }
 
 enum TutorialButtonDemo {
@@ -37,13 +45,11 @@ struct TutorialView: View {
     private let cards: [TutorialCard] = [
         TutorialCard(
             mainText: "Welcome to Bible Scroll.",
-            subtitleText: "Let's take a quick tour to help you get the most out of your Bible reading.",
-            buttonDemo: nil
+            subtitleText: "Let's take a quick tour to help you get the most out of your Bible reading."
         ),
         TutorialCard(
             mainText: "Swipe up to explore verses one at a time, just like this.",
-            subtitleText: "Each verse fills the screen so you can focus on God's Word.",
-            buttonDemo: nil
+            subtitleText: "Each verse fills the screen so you can focus on God's Word."
         ),
         TutorialCard(
             mainText: "Save your favorite verses by tapping the heart.",
@@ -75,10 +81,15 @@ struct TutorialView: View {
             subtitleText: "Build your personal collection of meaningful passages.",
             buttonDemo: .favorites
         ),
+        // Paywall card
+        TutorialCard(
+            mainText: "",
+            subtitleText: "",
+            isPaywall: true
+        ),
         TutorialCard(
             mainText: "You're all set!",
-            subtitleText: "Start exploring God's Word.",
-            buttonDemo: nil
+            subtitleText: "Start exploring God's Word."
         )
     ]
     
@@ -91,15 +102,24 @@ struct TutorialView: View {
                 
                 // Scrollable tutorial cards
                 ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 0) {
+                    VStack(spacing: 0) {
                         ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                            TutorialCardView(
-                                card: card,
-                                isLastCard: index == cards.count - 1,
-                                onComplete: completeTutorial
-                            )
-                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            if card.isPaywall {
+                                PaywallView(onComplete: completeTutorial)
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                            } else {
+                                TutorialCardView(
+                                    card: card,
+                                    isLastCard: index == cards.count - 1,
+                                    onComplete: completeTutorial
+                                )
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                            }
                         }
+                        
+                        // Exit trigger page - completes tutorial when scrolled into view
+                        TutorialExitTrigger(onTrigger: completeTutorial)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
                     }
                     .scrollTargetLayout()
                 }
@@ -145,66 +165,59 @@ struct TutorialCardView: View {
     @State private var animateIn = false
     
     var body: some View {
-        ZStack {
-            Color.white
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            VStack(spacing: 24) {
-                Spacer()
+            ZStack {
+                Color.white
                 
-                // Button demo (if applicable) - shown above text
-                if let demo = card.buttonDemo {
-                    TutorialButtonDemoView(demo: demo)
-                        .padding(.bottom, 20)
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(y: animateIn ? 0 : 20)
-                        .animation(.easeOut(duration: 0.5).delay(0.2), value: animateIn)
-                }
-                
-                // Main text (styled exactly like verse text - Georgia font)
-                Text(card.mainText)
-                    .font(.custom("Georgia", size: dynamicFontSize(for: card.mainText)))
-                    .fontWeight(.regular)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(6)
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 24)
-                    .frame(maxWidth: .infinity)
-                    .opacity(animateIn ? 1 : 0)
-                    .offset(y: animateIn ? 0 : 15)
-                    .animation(.easeOut(duration: 0.4), value: animateIn)
-                
-                // Subtitle (styled exactly like verse reference - gray with tracking)
-                Text(card.subtitleText)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.gray)
-                    .tracking(1)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 40)
-                    .opacity(animateIn ? 1 : 0)
-                    .offset(y: animateIn ? 0 : 10)
-                    .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
-                
-                // Get Started button on last card
-                if isLastCard {
-                    Button(action: onComplete) {
-                        Text("Get Started")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 14)
-                            .background(
-                                Capsule()
-                                    .fill(Color.black)
-                            )
+                VStack(spacing: isCompact ? 18 : 24) {
+                    Spacer()
+                    
+                    // Button demo (if applicable) - shown above text
+                    if let demo = card.buttonDemo {
+                        TutorialButtonDemoView(demo: demo, isCompact: isCompact)
+                            .padding(.bottom, isCompact ? 14 : 20)
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 20)
+                            .animation(.easeOut(duration: 0.5).delay(0.2), value: animateIn)
                     }
-                    .padding(.top, 30)
-                    .opacity(animateIn ? 1 : 0)
-                    .scaleEffect(animateIn ? 1 : 0.9)
-                    .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
+                    
+                    // Main text (styled exactly like verse text - Georgia font)
+                    Text(card.mainText)
+                        .font(.custom("Georgia", size: dynamicFontSize(for: card.mainText, isCompact: isCompact)))
+                        .fontWeight(.regular)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(isCompact ? 4 : 6)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, isCompact ? 20 : 24)
+                        .frame(maxWidth: .infinity)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 15)
+                        .animation(.easeOut(duration: 0.4), value: animateIn)
+                    
+                    // Subtitle (styled exactly like verse reference - gray with tracking)
+                    Text(card.subtitleText)
+                        .font(.system(size: isCompact ? 12 : 14, weight: .medium))
+                        .foregroundColor(.gray)
+                        .tracking(1)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(isCompact ? 3 : 4)
+                        .padding(.horizontal, isCompact ? 30 : 40)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 10)
+                        .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
+                    
+                    Spacer()
+                    
+                    // Scroll hint on last card
+                    if isLastCard {
+                        LastCardScrollHint()
+                            .padding(.bottom, isCompact ? 60 : 80)
+                            .opacity(animateIn ? 1 : 0)
+                            .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
+                    }
                 }
-                
-                Spacer()
             }
         }
         .onAppear {
@@ -218,14 +231,15 @@ struct TutorialCardView: View {
         }
     }
     
-    private func dynamicFontSize(for text: String) -> CGFloat {
+    private func dynamicFontSize(for text: String, isCompact: Bool) -> CGFloat {
         let length = text.count
+        let baseSize: CGFloat = isCompact ? 20 : 26
         if length > 80 {
-            return 22
+            return baseSize - 4
         } else if length > 50 {
-            return 24
+            return baseSize - 2
         } else {
-            return 26
+            return baseSize
         }
     }
 }
@@ -233,33 +247,35 @@ struct TutorialCardView: View {
 // MARK: - Tutorial Button Demo View
 struct TutorialButtonDemoView: View {
     let demo: TutorialButtonDemo
+    var isCompact: Bool = false
     
     var body: some View {
         switch demo {
         case .like:
-            LikeButtonDemo()
+            LikeButtonDemo(isCompact: isCompact)
         case .notes:
-            NotesButtonDemo()
+            NotesButtonDemo(isCompact: isCompact)
         case .share:
-            ShareButtonDemo()
+            ShareButtonDemo(isCompact: isCompact)
         case .crown:
-            CrownButtonDemo()
+            CrownButtonDemo(isCompact: isCompact)
         case .bookPicker:
-            BookPickerDemo()
+            BookPickerDemo(isCompact: isCompact)
         case .favorites:
-            FavoritesDemo()
+            FavoritesDemo(isCompact: isCompact)
         case .translation:
-            TranslationDemo()
+            TranslationDemo(isCompact: isCompact)
         case .notesHeader:
-            NotesHeaderDemo()
+            NotesHeaderDemo(isCompact: isCompact)
         case .search:
-            SearchDemo()
+            SearchDemo(isCompact: isCompact)
         }
     }
 }
 
 // MARK: - Button Demos
 struct LikeButtonDemo: View {
+    var isCompact: Bool = false
     @State private var isLiked = false
     @State private var showHeart = false
     
@@ -282,13 +298,13 @@ struct LikeButtonDemo: View {
                     .renderingMode(.template)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
+                    .frame(width: isCompact ? 22 : 28, height: isCompact ? 22 : 28)
                     .foregroundColor(isLiked ? .red : .black)
-                    .padding(18)
+                    .padding(isCompact ? 14 : 18)
                     .background(
                         Circle()
                             .fill(Color.white)
-                            .shadow(color: Color.black.opacity(0.1), radius: 16, x: 0, y: 6)
+                            .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 12 : 16, x: 0, y: isCompact ? 4 : 6)
                     )
                     .scaleEffect(isLiked ? 1.1 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isLiked)
@@ -299,6 +315,7 @@ struct LikeButtonDemo: View {
 }
 
 struct NotesButtonDemo: View {
+    var isCompact: Bool = false
     @State private var hasNote = false
     
     var body: some View {
@@ -311,13 +328,13 @@ struct NotesButtonDemo: View {
                 .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 28, height: 28)
+                .frame(width: isCompact ? 22 : 28, height: isCompact ? 22 : 28)
                 .foregroundColor(.black)
-                .padding(18)
+                .padding(isCompact ? 14 : 18)
                 .background(
                     Circle()
                         .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.1), radius: 16, x: 0, y: 6)
+                        .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 12 : 16, x: 0, y: isCompact ? 4 : 6)
                 )
         }
         .buttonStyle(PlainButtonStyle())
@@ -325,23 +342,26 @@ struct NotesButtonDemo: View {
 }
 
 struct ShareButtonDemo: View {
+    var isCompact: Bool = false
+    
     var body: some View {
         Image("bx-send")
             .renderingMode(.template)
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .frame(width: 28, height: 28)
+            .frame(width: isCompact ? 22 : 28, height: isCompact ? 22 : 28)
             .foregroundColor(.black)
-            .padding(18)
+            .padding(isCompact ? 14 : 18)
             .background(
                 Circle()
                     .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.1), radius: 16, x: 0, y: 6)
+                    .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 12 : 16, x: 0, y: isCompact ? 4 : 6)
             )
     }
 }
 
 struct CrownButtonDemo: View {
+    var isCompact: Bool = false
     @State private var scale: CGFloat = 1.0
     
     var body: some View {
@@ -349,13 +369,13 @@ struct CrownButtonDemo: View {
             .renderingMode(.template)
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .frame(width: 60, height: 60)
+            .frame(width: isCompact ? 45 : 60, height: isCompact ? 45 : 60)
             .foregroundColor(.black)
-            .padding(16)
+            .padding(isCompact ? 12 : 16)
             .background(
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: isCompact ? 16 : 20)
                     .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.1), radius: 16, x: 0, y: 6)
+                    .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 12 : 16, x: 0, y: isCompact ? 4 : 6)
             )
             .scaleEffect(scale)
             .onAppear {
@@ -368,43 +388,47 @@ struct CrownButtonDemo: View {
 }
 
 struct BookPickerDemo: View {
+    var isCompact: Bool = false
+    
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: isCompact ? 3 : 4) {
             Text("Genesis")
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: isCompact ? 12 : 14, weight: .medium))
             Text("1")
-                .font(.system(size: 13, weight: .regular))
+                .font(.system(size: isCompact ? 11 : 13, weight: .regular))
                 .foregroundColor(.gray)
             Image(systemName: "chevron.down")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: isCompact ? 8 : 10, weight: .semibold))
                 .foregroundColor(.gray)
         }
         .foregroundColor(.black)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, isCompact ? 10 : 14)
+        .padding(.vertical, isCompact ? 8 : 10)
         .background(
             Capsule()
                 .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
+                .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 8 : 12, x: 0, y: isCompact ? 3 : 4)
         )
     }
 }
 
 struct FavoritesDemo: View {
+    var isCompact: Bool = false
+    
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: isCompact ? 8 : 12) {
             // Notes button
             Image("bxs-message")
                 .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 20, height: 20)
+                .frame(width: isCompact ? 16 : 20, height: isCompact ? 16 : 20)
                 .foregroundColor(.black)
-                .padding(12)
+                .padding(isCompact ? 10 : 12)
                 .background(
                     Circle()
                         .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+                        .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 8 : 10, x: 0, y: isCompact ? 3 : 4)
                 )
             
             // Favorites button
@@ -412,59 +436,65 @@ struct FavoritesDemo: View {
                 .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 20, height: 20)
+                .frame(width: isCompact ? 16 : 20, height: isCompact ? 16 : 20)
                 .foregroundColor(.black)
-                .padding(12)
+                .padding(isCompact ? 10 : 12)
                 .background(
                     Circle()
                         .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+                        .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 8 : 10, x: 0, y: isCompact ? 3 : 4)
                 )
         }
     }
 }
 
 struct TranslationDemo: View {
+    var isCompact: Bool = false
+    
     var body: some View {
         Text("KJV")
-            .font(.system(size: 12, weight: .semibold))
+            .font(.system(size: isCompact ? 10 : 12, weight: .semibold))
             .foregroundColor(.black)
-            .padding(12)
+            .padding(isCompact ? 10 : 12)
             .background(
                 Circle()
                     .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+                    .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 8 : 10, x: 0, y: isCompact ? 3 : 4)
             )
     }
 }
 
 struct NotesHeaderDemo: View {
+    var isCompact: Bool = false
+    
     var body: some View {
         Image("bxs-message")
             .renderingMode(.template)
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .frame(width: 20, height: 20)
+            .frame(width: isCompact ? 16 : 20, height: isCompact ? 16 : 20)
             .foregroundColor(.black)
-            .padding(12)
+            .padding(isCompact ? 10 : 12)
             .background(
                 Circle()
                     .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+                    .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 8 : 10, x: 0, y: isCompact ? 3 : 4)
             )
     }
 }
 
 struct SearchDemo: View {
+    var isCompact: Bool = false
+    
     var body: some View {
         Image(systemName: "magnifyingglass")
-            .font(.system(size: 16, weight: .medium))
+            .font(.system(size: isCompact ? 13 : 16, weight: .medium))
             .foregroundColor(.black)
-            .padding(12)
+            .padding(isCompact ? 10 : 12)
             .background(
                 Circle()
                     .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
+                    .shadow(color: Color.black.opacity(0.1), radius: isCompact ? 8 : 10, x: 0, y: isCompact ? 3 : 4)
             )
     }
 }
@@ -492,6 +522,429 @@ struct ScrollHintView: View {
     }
 }
 
+// MARK: - Last Card Scroll Hint
+struct LastCardScrollHint: View {
+    @State private var animating = false
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "chevron.up")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.gray.opacity(0.6))
+                .offset(y: animating ? -8 : 0)
+            
+            Text("Swipe up to begin")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray.opacity(0.6))
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                animating = true
+            }
+        }
+    }
+}
+
+// MARK: - Tutorial Exit Trigger
+struct TutorialExitTrigger: View {
+    let onTrigger: () -> Void
+    @State private var hasTriggered = false
+    
+    var body: some View {
+        GeometryReader { geo in
+            let frame = geo.frame(in: .global)
+            // Page is "settled" when its top is near the top of the screen (within safe area)
+            let isSettled = frame.minY >= -10 && frame.minY <= 100
+            
+            Color.white
+                .onChange(of: isSettled) { oldValue, newValue in
+                    // Only trigger when transitioning from not settled to settled
+                    if newValue && !oldValue && !hasTriggered {
+                        hasTriggered = true
+                        // Wait 0.5 second on the blank white screen, then trigger
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            onTrigger()
+                        }
+                    }
+                }
+                .onAppear {
+                    // Also check on appear in case it's already settled
+                    if isSettled && !hasTriggered {
+                        hasTriggered = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            onTrigger()
+                        }
+                    }
+                }
+        }
+    }
+}
+
+// MARK: - Paywall View
+struct PaywallView: View {
+    var onComplete: (() -> Void)? = nil
+    
+    @State private var selectedPlan: SubscriptionPlan = .yearly
+    @State private var withFreeTrial: Bool = false
+    @State private var animateIn = false
+    
+    enum SubscriptionPlan {
+        case monthly
+        case yearly
+        
+        func price(withTrial: Bool) -> String {
+            switch self {
+            case .monthly: return withTrial ? "$4.99" : "$3.99"
+            case .yearly: return withTrial ? "$2.49" : "$1.67"
+            }
+        }
+        
+        var period: String {
+            return "/month"
+        }
+        
+        func savings(withTrial: Bool) -> String? {
+            switch self {
+            case .monthly: return nil
+            case .yearly: return withTrial ? "Save 50%" : "Save 58%"
+            }
+        }
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
+            let horizontalPadding: CGFloat = min(32, geometry.size.width * 0.08)
+            
+            ZStack {
+                Color.white
+                
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        Spacer()
+                            .frame(height: isCompact ? 30 : 60)
+                        
+                        // Crown icon
+                        Image("crown-icon")
+                            .renderingMode(.template)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: isCompact ? 50 : 70, height: isCompact ? 50 : 70)
+                            .foregroundColor(.black)
+                            .opacity(animateIn ? 1 : 0)
+                            .scaleEffect(animateIn ? 1 : 0.8)
+                            .animation(.easeOut(duration: 0.5), value: animateIn)
+                        
+                        Spacer()
+                            .frame(height: isCompact ? 16 : 28)
+                        
+                        // Title
+                        Text("Unlock Bible Scroll")
+                            .font(.custom("Georgia", size: isCompact ? 24 : 28))
+                            .fontWeight(.regular)
+                            .foregroundColor(.black)
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 15)
+                            .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
+                        
+                        Spacer()
+                            .frame(height: isCompact ? 8 : 12)
+                        
+                        // Subtitle
+                        Text("Deeper study. Unlimited access.")
+                            .font(.system(size: isCompact ? 13 : 15, weight: .medium))
+                            .foregroundColor(.gray)
+                            .tracking(0.5)
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 10)
+                            .animation(.easeOut(duration: 0.4).delay(0.15), value: animateIn)
+                        
+                        Spacer()
+                            .frame(height: isCompact ? 24 : 40)
+                        
+                        // Features list
+                        VStack(spacing: isCompact ? 12 : 16) {
+                            FeatureRow(text: "AI-powered Bible study", isCompact: isCompact)
+                            FeatureRow(text: "Explain It Easier button", isCompact: isCompact)
+                            FeatureRow(text: "Cross-references & context", isCompact: isCompact)
+                            FeatureRow(text: "Ad-free experience", isCompact: isCompact)
+                        }
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 15)
+                        .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                        
+                        Spacer()
+                            .frame(height: isCompact ? 20 : 32)
+                        
+                        // Free trial toggle
+                        FreeTrialToggle(withFreeTrial: $withFreeTrial, isCompact: isCompact)
+                            .padding(.horizontal, horizontalPadding)
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 15)
+                            .animation(.easeOut(duration: 0.4).delay(0.22), value: animateIn)
+                        
+                        Spacer()
+                            .frame(height: isCompact ? 14 : 20)
+                        
+                        // Subscription options
+                        VStack(spacing: isCompact ? 10 : 12) {
+                            // Yearly plan
+                            SubscriptionOptionView(
+                                plan: .yearly,
+                                isSelected: selectedPlan == .yearly,
+                                withFreeTrial: withFreeTrial,
+                                isCompact: isCompact,
+                                onSelect: { selectedPlan = .yearly }
+                            )
+                            
+                            // Monthly plan
+                            SubscriptionOptionView(
+                                plan: .monthly,
+                                isSelected: selectedPlan == .monthly,
+                                withFreeTrial: withFreeTrial,
+                                isCompact: isCompact,
+                                onSelect: { selectedPlan = .monthly }
+                            )
+                            
+                            // No commitment text
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.shield.fill")
+                                    .font(.system(size: isCompact ? 10 : 12, weight: .medium))
+                                    .foregroundColor(.gray)
+                                
+                                Text("No commitment · Cancel anytime")
+                                    .font(.system(size: isCompact ? 10 : 12, weight: .regular))
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.top, isCompact ? 2 : 4)
+                        }
+                        .padding(.horizontal, horizontalPadding)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 15)
+                        .animation(.easeOut(duration: 0.4).delay(0.25), value: animateIn)
+                        
+                        Spacer()
+                            .frame(height: isCompact ? 12 : 16)
+                        
+                        // Subscribe button
+                        Button(action: {
+                            // TODO: Implement subscription purchase
+                            let impact = UIImpactFeedbackGenerator(style: .medium)
+                            impact.impactOccurred()
+                            onComplete?()
+                        }) {
+                            Text("Continue")
+                                .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, isCompact ? 14 : 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(Color.black)
+                                )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.horizontal, horizontalPadding)
+                        .opacity(animateIn ? 1 : 0)
+                        .scaleEffect(animateIn ? 1 : 0.95)
+                        .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
+                        
+                        Spacer()
+                            .frame(height: isCompact ? 10 : 16)
+                        
+                        // Restore purchases
+                        Button(action: {
+                            // TODO: Implement restore purchases
+                        }) {
+                            Text("Restore Purchases")
+                                .font(.system(size: isCompact ? 11 : 13, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .opacity(animateIn ? 1 : 0)
+                        .animation(.easeOut(duration: 0.4).delay(0.35), value: animateIn)
+                        
+                        Spacer()
+                            .frame(height: isCompact ? 16 : 30)
+                        
+                        // Terms
+                        HStack(spacing: 4) {
+                            Text("Terms")
+                                .underline()
+                            Text("·")
+                            Text("Privacy")
+                                .underline()
+                        }
+                        .font(.system(size: isCompact ? 10 : 11, weight: .regular))
+                        .foregroundColor(.gray.opacity(0.7))
+                        .padding(.bottom, isCompact ? 20 : 30)
+                        .opacity(animateIn ? 1 : 0)
+                        .animation(.easeOut(duration: 0.4).delay(0.4), value: animateIn)
+                    }
+                    .frame(minHeight: geometry.size.height)
+                }
+                .scrollDisabled(geometry.size.height >= 700)
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                animateIn = true
+            }
+        }
+        .onDisappear {
+            animateIn = false
+        }
+    }
+}
+
+// MARK: - Feature Row
+struct FeatureRow: View {
+    let text: String
+    var isCompact: Bool = false
+    
+    var body: some View {
+        HStack(spacing: isCompact ? 10 : 12) {
+            Image(systemName: "checkmark")
+                .font(.system(size: isCompact ? 10 : 12, weight: .bold))
+                .foregroundColor(.black)
+            
+            Text(text)
+                .font(.system(size: isCompact ? 13 : 15, weight: .regular))
+                .foregroundColor(.black.opacity(0.8))
+            
+            Spacer()
+        }
+        .padding(.horizontal, isCompact ? 40 : 50)
+    }
+}
+
+// MARK: - Free Trial Toggle
+struct FreeTrialToggle: View {
+    @Binding var withFreeTrial: Bool
+    var isCompact: Bool = false
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Pay Now option (left)
+            Button(action: { 
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    withFreeTrial = false 
+                }
+            }) {
+                Text("Pay Now")
+                    .font(.system(size: isCompact ? 12 : 14, weight: .medium))
+                    .foregroundColor(withFreeTrial ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, isCompact ? 10 : 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(withFreeTrial ? Color.clear : Color.black)
+                    )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Free Trial option (right)
+            Button(action: { 
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    withFreeTrial = true 
+                }
+            }) {
+                Text("Free Trial")
+                    .font(.system(size: isCompact ? 12 : 14, weight: .medium))
+                    .foregroundColor(withFreeTrial ? .white : .black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, isCompact ? 10 : 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(withFreeTrial ? Color.black : Color.clear)
+                    )
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.gray.opacity(0.1))
+        )
+    }
+}
+
+// MARK: - Subscription Option View
+struct SubscriptionOptionView: View {
+    let plan: PaywallView.SubscriptionPlan
+    let isSelected: Bool
+    let withFreeTrial: Bool
+    var isCompact: Bool = false
+    let onSelect: () -> Void
+    
+    var body: some View {
+        Button(action: onSelect) {
+            HStack {
+                // Selection indicator
+                ZStack {
+                    Circle()
+                        .stroke(isSelected ? Color.black : Color.gray.opacity(0.4), lineWidth: 2)
+                        .frame(width: isCompact ? 18 : 22, height: isCompact ? 18 : 22)
+                    
+                    if isSelected {
+                        Circle()
+                            .fill(Color.black)
+                            .frame(width: isCompact ? 10 : 12, height: isCompact ? 10 : 12)
+                    }
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(plan == .yearly ? "Annual" : "Monthly")
+                            .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                            .foregroundColor(.black)
+                        
+                        if let savings = plan.savings(withTrial: withFreeTrial) {
+                            Text(savings)
+                                .font(.system(size: isCompact ? 9 : 11, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, isCompact ? 6 : 8)
+                                .padding(.vertical, isCompact ? 2 : 3)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.black)
+                                )
+                        }
+                    }
+                    
+                }
+                
+                Spacer()
+                
+                // Price
+                HStack(alignment: .firstTextBaseline, spacing: 1) {
+                    Text(plan.price(withTrial: withFreeTrial))
+                        .font(.system(size: isCompact ? 16 : 18, weight: .semibold))
+                        .foregroundColor(.black)
+                    Text(plan.period)
+                        .font(.system(size: isCompact ? 10 : 12, weight: .regular))
+                        .foregroundColor(.gray)
+                }
+            }
+            .padding(.horizontal, isCompact ? 14 : 18)
+            .padding(.vertical, isCompact ? 12 : 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.black : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(isSelected ? Color.black.opacity(0.03) : Color.clear)
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
 #Preview {
     TutorialView(isShowingTutorial: .constant(true))
+}
+
+#Preview("Paywall") {
+    PaywallView()
 }
