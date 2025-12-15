@@ -15,26 +15,64 @@ struct AnimatedHeart: Identifiable {
     let driftDirection: CGFloat  // Random left/right drift when floating up
 }
 
-// Fun, snappy button style with haptic feedback for the crown button
-struct CrownButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
-            .brightness(configuration.isPressed ? -0.08 : 0)
-            // Ultra-fast press down, bouncy release
-            .animation(
-                configuration.isPressed 
-                    ? .easeOut(duration: 0.05)  // Instant press
-                    : .spring(response: 0.2, dampingFraction: 0.4),  // Bouncy release
-                value: configuration.isPressed
+// Crown button with touch-responsive animation and haptics
+struct CrownButton: View {
+    let action: () -> Void
+    
+    @State private var scale: CGFloat = 1.0
+    @State private var isTouching = false
+    
+    var body: some View {
+        Image("crown-icon")
+            .renderingMode(.template)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 90, height: 90)
+            .foregroundColor(.black)
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
             )
-            .onChange(of: configuration.isPressed) { wasPressed, isPressed in
-                if isPressed {
-                    // Immediate haptic on press
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                    impactFeedback.impactOccurred()
-                }
-            }
+            .scaleEffect(scale)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        // Only shrink on first touch (prevent multiple shrinks during drag)
+                        if !isTouching {
+                            isTouching = true
+                            
+                            // Haptic on touch down
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                            impactFeedback.impactOccurred()
+                            
+                            // Shrink down (less dramatic)
+                            withAnimation(.easeInOut(duration: 0.08)) {
+                                scale = 0.85
+                            }
+                        }
+                    }
+                    .onEnded { _ in
+                        isTouching = false
+                        
+                        // Ensure shrink completes THEN bounce back
+                        // Wait for shrink to finish (0.08s) before bouncing
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                            // Haptic on release
+                            let releaseFeedback = UIImpactFeedbackGenerator(style: .light)
+                            releaseFeedback.impactOccurred()
+                            
+                            // Bounce back up with spring (snappier)
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+                                scale = 1.0
+                            }
+                            
+                            // Execute action
+                            action()
+                        }
+                    }
+            )
     }
 }
 
@@ -146,23 +184,9 @@ struct VerseCardView: View {
             
             // Crown button - centered below header (AI Study)
             VStack {
-                Button(action: {
+                CrownButton(action: {
                     showingAIStudy = true
-                }) {
-                    Image("crown-icon")
-                        .renderingMode(.template)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 90, height: 90)
-                        .foregroundColor(.black)
-                        .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-                        )
-                }
-                .buttonStyle(CrownButtonStyle())
+                })
                 .padding(.top, 160)
                 
                 Spacer()
