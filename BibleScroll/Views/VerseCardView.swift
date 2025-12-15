@@ -15,6 +15,29 @@ struct AnimatedHeart: Identifiable {
     let driftDirection: CGFloat  // Random left/right drift when floating up
 }
 
+// Fun, snappy button style with haptic feedback for the crown button
+struct CrownButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
+            .brightness(configuration.isPressed ? -0.08 : 0)
+            // Ultra-fast press down, bouncy release
+            .animation(
+                configuration.isPressed 
+                    ? .easeOut(duration: 0.05)  // Instant press
+                    : .spring(response: 0.2, dampingFraction: 0.4),  // Bouncy release
+                value: configuration.isPressed
+            )
+            .onChange(of: configuration.isPressed) { wasPressed, isPressed in
+                if isPressed {
+                    // Immediate haptic on press
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                }
+            }
+    }
+}
+
 struct HeartAnimationView: View {
     let heart: AnimatedHeart
     let size: CGFloat
@@ -94,7 +117,8 @@ struct VerseCardView: View {
                         .fontWeight(.regular)
                         .multilineTextAlignment(.center)
                         .lineSpacing(6)
-                        .padding(.horizontal, 32)
+                        .padding(.horizontal, 24)
+                        .frame(maxWidth: .infinity)
                     
                     // Reference
                     Text(verse.reference)
@@ -135,11 +159,11 @@ struct VerseCardView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(Color.white)
-                                .shadow(color: .black.opacity(0.1), radius: 12, x: 0, y: 4)
+                                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                         )
                 }
-                .buttonStyle(FastPopButtonStyle())
-                .padding(.top, 160)  // Closer to the verses
+                .buttonStyle(CrownButtonStyle())
+                .padding(.top, 160)
                 
                 Spacer()
             }

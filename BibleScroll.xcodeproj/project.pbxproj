@@ -16,8 +16,6 @@
 		A100000D245678900000007 /* BibleAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000E245678900000007 /* BibleAPIService.swift */; };
 		A100000F245678900000008 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010245678900000008 /* StorageService.swift */; };
 		A1000011245678900000009 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012245678900000009 /* AuthService.swift */; };
-		A1000027245678900000020 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000028245678900000020 /* APIConfig.swift */; };
-		A1000035245678900000027 /* KJVBibleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000036245678900000027 /* KJVBibleData.swift */; };
 		A1000013245678900000010 /* BibleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000014245678900000010 /* BibleViewModel.swift */; };
 		A1000015245678900000011 /* FavoritesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016245678900000011 /* FavoritesViewModel.swift */; };
 		A1000017245678900000012 /* MainScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018245678900000012 /* MainScrollView.swift */; };
@@ -25,18 +23,21 @@
 		A100001B245678900000014 /* ActionButtonsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001C245678900000014 /* ActionButtonsView.swift */; };
 		A100001D245678900000015 /* BookPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001E245678900000015 /* BookPickerView.swift */; };
 		A100001F245678900000016 /* NotesSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000020245678900000016 /* NotesSheetView.swift */; };
+		A1000021245678900000017 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000022245678900000017 /* Extensions.swift */; };
+		A1000023245678900000018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000024245678900000018 /* Assets.xcassets */; };
+		A1000025245678900000019 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000026245678900000019 /* Preview Assets.xcassets */; };
+		A1000027245678900000020 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000028245678900000020 /* APIConfig.swift */; };
 		A1000029245678900000021 /* FavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100002A245678900000021 /* FavoritesView.swift */; };
 		A100002B245678900000022 /* LaunchScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100002C245678900000022 /* LaunchScreenView.swift */; };
 		A100002F245678900000024 /* NotesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000030245678900000024 /* NotesListView.swift */; };
 		A1000031245678900000025 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000032245678900000025 /* SearchView.swift */; };
 		A1000033245678900000026 /* TranslationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000034245678900000026 /* TranslationPickerView.swift */; };
-		A1000021245678900000017 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000022245678900000017 /* Extensions.swift */; };
+		A1000035245678900000027 /* KJVBibleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000036245678900000027 /* KJVBibleData.swift */; };
+		A1000037245678900000028 /* kjv.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000038245678900000028 /* kjv.json */; };
 		A1000039245678900000029 /* RedLetterText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003A245678900000029 /* RedLetterText.swift */; };
 		A100003B245678900000030 /* AIStudyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003C245678900000030 /* AIStudyService.swift */; };
 		A100003D245678900000031 /* AIStudyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003E245678900000031 /* AIStudyView.swift */; };
-		A1000023245678900000018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000024245678900000018 /* Assets.xcassets */; };
-		A1000025245678900000019 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000026245678900000019 /* Preview Assets.xcassets */; };
-		A1000037245678900000028 /* kjv.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000038245678900000028 /* kjv.json */; };
+		A100003F245678900000032 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000040245678900000032 /* TutorialView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,8 +51,6 @@
 		A100000E245678900000007 /* BibleAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAPIService.swift; sourceTree = "<group>"; };
 		A1000010245678900000008 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		A1000012245678900000009 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
-		A1000028245678900000020 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
-		A1000036245678900000027 /* KJVBibleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVBibleData.swift; sourceTree = "<group>"; };
 		A1000014245678900000010 /* BibleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleViewModel.swift; sourceTree = "<group>"; };
 		A1000016245678900000011 /* FavoritesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesViewModel.swift; sourceTree = "<group>"; };
 		A1000018245678900000012 /* MainScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScrollView.swift; sourceTree = "<group>"; };
@@ -59,18 +58,21 @@
 		A100001C245678900000014 /* ActionButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButtonsView.swift; sourceTree = "<group>"; };
 		A100001E245678900000015 /* BookPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookPickerView.swift; sourceTree = "<group>"; };
 		A1000020245678900000016 /* NotesSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesSheetView.swift; sourceTree = "<group>"; };
+		A1000022245678900000017 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		A1000024245678900000018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000026245678900000019 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A1000028245678900000020 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		A100002A245678900000021 /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
 		A100002C245678900000022 /* LaunchScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchScreenView.swift; sourceTree = "<group>"; };
 		A1000030245678900000024 /* NotesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesListView.swift; sourceTree = "<group>"; };
 		A1000032245678900000025 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		A1000034245678900000026 /* TranslationPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationPickerView.swift; sourceTree = "<group>"; };
-		A1000022245678900000017 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
-		A100003A245678900000029 /* RedLetterText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedLetterText.swift; sourceTree = "<group>"; };
-		A1000024245678900000018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A1000026245678900000019 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A1000036245678900000027 /* KJVBibleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVBibleData.swift; sourceTree = "<group>"; };
 		A1000038245678900000028 /* kjv.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv.json; sourceTree = "<group>"; };
+		A100003A245678900000029 /* RedLetterText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedLetterText.swift; sourceTree = "<group>"; };
 		A100003C245678900000030 /* AIStudyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStudyService.swift; sourceTree = "<group>"; };
 		A100003E245678900000031 /* AIStudyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStudyView.swift; sourceTree = "<group>"; };
+		A1000040245678900000032 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,14 +86,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A1FFFFFE245678900000000 = {
-			isa = PBXGroup;
-			children = (
-				A1FFFFF8245678900000000 /* BibleScroll */,
-				A1FFFFF1245678900000000 /* Products */,
-			);
-			sourceTree = "<group>";
-		};
 		A1FFFFF1245678900000000 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -150,6 +144,7 @@
 				A1000030245678900000024 /* NotesListView.swift */,
 				A1000032245678900000025 /* SearchView.swift */,
 				A1000034245678900000026 /* TranslationPickerView.swift */,
+				A1000040245678900000032 /* TutorialView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -174,6 +169,14 @@
 				A1000012245678900000009 /* AuthService.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		A1FFFFFE245678900000000 = {
+			isa = PBXGroup;
+			children = (
+				A1FFFFF8245678900000000 /* BibleScroll */,
+				A1FFFFF1245678900000000 /* Products */,
+			);
 			sourceTree = "<group>";
 		};
 		A1FFFFFE245678900000001 /* Utilities */ = {
@@ -291,6 +294,7 @@
 				A1000039245678900000029 /* RedLetterText.swift in Sources */,
 				A100003B245678900000030 /* AIStudyService.swift in Sources */,
 				A100003D245678900000031 /* AIStudyView.swift in Sources */,
+				A100003F245678900000032 /* TutorialView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -424,6 +428,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BibleScroll/Preview Content\"";
+				DEVELOPMENT_TEAM = 39MMRPHXS2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Bible Scroll";
@@ -455,6 +460,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BibleScroll/Preview Content\"";
+				DEVELOPMENT_TEAM = 39MMRPHXS2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Bible Scroll";
@@ -503,4 +509,3 @@
 	};
 	rootObject = A1FFFFEE245678900000000 /* Project object */;
 }
-

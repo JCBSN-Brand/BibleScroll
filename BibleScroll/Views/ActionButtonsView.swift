@@ -2,17 +2,17 @@
 //  ActionButtonsView.swift
 //  BibleScroll
 //
-//  Like, comment, and share buttons (vertical stack on middle-right)
+//  Like, comment, and share buttons (vertical stack on bottom-right)
 //
 
 import SwiftUI
 
-// Lightning fast pop button style
+// Button style used by action buttons and crown button
 struct FastPopButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
-            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
@@ -22,23 +22,15 @@ struct ActionButtonsView: View {
     let onNoteTap: () -> Void
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             // Like/Favorite button
             Button(action: {
                 favoritesViewModel.toggleFavorite(verse)
             }) {
-                Image(favoritesViewModel.isFavorite(verse) ? "bxs-heart" : "bx-heart")
-                    .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 18, height: 18)
-                    .foregroundColor(favoritesViewModel.isFavorite(verse) ? .red : .black)
-                    .padding(12)
-                    .background(
-                        Circle()
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-                    )
+                actionButtonLabel(
+                    imageName: favoritesViewModel.isFavorite(verse) ? "bxs-heart" : "bx-heart",
+                    tint: favoritesViewModel.isFavorite(verse) ? .red : .black
+                )
             }
             .buttonStyle(FastPopButtonStyle())
             
@@ -46,38 +38,37 @@ struct ActionButtonsView: View {
             Button(action: {
                 onNoteTap()
             }) {
-                Image(favoritesViewModel.hasNote(verseId: verse.verseId) ? "bxs-message" : "bx-message")
-                    .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 18, height: 18)
-                    .foregroundColor(.black)
-                    .padding(12)
-                    .background(
-                        Circle()
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-                    )
+                actionButtonLabel(
+                    imageName: favoritesViewModel.hasNote(verseId: verse.verseId) ? "bxs-message" : "bx-message",
+                    tint: .black
+                )
             }
             .buttonStyle(FastPopButtonStyle())
             
             // Share button
             ShareLink(item: shareText) {
-                Image("bx-send")
-                    .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 18, height: 18)
-                    .foregroundColor(.black)
-                    .padding(12)
-                    .background(
-                        Circle()
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-                    )
+                actionButtonLabel(
+                    imageName: "bx-send",
+                    tint: .black
+                )
             }
-            .buttonStyle(FastPopButtonStyle())
+            .buttonStyle(PlainButtonStyle())
         }
+    }
+    
+    private func actionButtonLabel(imageName: String, tint: Color) -> some View {
+        Image(imageName)
+            .renderingMode(.template)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 20, height: 20)
+            .foregroundColor(tint)
+            .padding(13)
+            .background(
+                Circle()
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+            )
     }
     
     private var shareText: String {
@@ -92,5 +83,5 @@ struct ActionButtonsView: View {
         onNoteTap: {}
     )
     .padding()
-    .background(Color.white)
+    .background(Color.gray.opacity(0.1))
 }
