@@ -56,12 +56,20 @@ struct HeaderCapsuleButton<Content: View>: View {
 
 struct ContentView: View {
     @StateObject private var viewModel = BibleViewModel()
+    @StateObject private var authService = AuthService()
     @State private var showingBookPicker = false
     @State private var showingFavorites = false
     @State private var showingNotes = false
     @State private var showingSearch = false
     @State private var showingTranslation = false
-    @State private var selectedTranslation: BibleTranslation = .kjv
+    @State private var selectedTranslation: BibleTranslation = {
+        // Load saved translation from UserDefaults
+        if let savedTranslationRaw = UserDefaults.standard.string(forKey: "lastTranslation"),
+           let savedTranslation = BibleTranslation(rawValue: savedTranslationRaw) {
+            return savedTranslation
+        }
+        return .kjv // Default to KJV
+    }()
     
     // Tutorial state - persisted with @AppStorage
     @AppStorage("hasCompletedTutorial") private var hasCompletedTutorial = false
@@ -120,7 +128,7 @@ struct ContentView: View {
     private var mainContent: some View {
         GeometryReader { geometry in
             ZStack {
-                MainScrollView(viewModel: viewModel)
+                MainScrollView(viewModel: viewModel, authService: authService)
                 
                 // Navigation bar - positioned at top with proper safe area
                 VStack(spacing: 0) {

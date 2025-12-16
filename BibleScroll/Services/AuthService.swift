@@ -13,6 +13,7 @@ class AuthService: ObservableObject {
     
     @Published var isAuthenticated: Bool = false
     @Published var currentUser: User?
+    @Published var isPremium: Bool = false  // Track premium subscription status
     
     struct User {
         let id: String

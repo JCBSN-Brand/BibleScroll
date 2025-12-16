@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import StoreKit
 
 // MARK: - Tutorial Card Model
 struct TutorialCard: Identifiable {
@@ -14,12 +15,14 @@ struct TutorialCard: Identifiable {
     let subtitleText: String
     let buttonDemo: TutorialButtonDemo?
     let isPaywall: Bool
+    let isReviewRequest: Bool
     
-    init(mainText: String, subtitleText: String, buttonDemo: TutorialButtonDemo? = nil, isPaywall: Bool = false) {
+    init(mainText: String, subtitleText: String, buttonDemo: TutorialButtonDemo? = nil, isPaywall: Bool = false, isReviewRequest: Bool = false) {
         self.mainText = mainText
         self.subtitleText = subtitleText
         self.buttonDemo = buttonDemo
         self.isPaywall = isPaywall
+        self.isReviewRequest = isReviewRequest
     }
 }
 
@@ -42,9 +45,14 @@ struct TutorialView: View {
     @State private var hasScrolled = false
     @State private var showScrollHint = true
     
+    // Paywall state - kept at TutorialView level to persist across re-renders
+    @State private var paywallSelectedPlan: PaywallView.SubscriptionPlan = .yearly
+    @State private var paywallWithFreeTrial: Bool = false
+    @State private var paywallIsPurchasing: Bool = false
+    
     private let cards: [TutorialCard] = [
         TutorialCard(
-            mainText: "Welcome to Bible Scroll.",
+            mainText: "Welcome to Scroll The Bible.",
             subtitleText: "Let's take a quick tour to help you get the most out of your Bible reading."
         ),
         TutorialCard(
@@ -87,6 +95,12 @@ struct TutorialView: View {
             subtitleText: "",
             isPaywall: true
         ),
+        // Review request card
+        TutorialCard(
+            mainText: "",
+            subtitleText: "",
+            isReviewRequest: true
+        ),
         TutorialCard(
             mainText: "You're all set!",
             subtitleText: "Start exploring God's Word."
@@ -105,7 +119,15 @@ struct TutorialView: View {
                     VStack(spacing: 0) {
                         ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                             if card.isPaywall {
-                                PaywallView(onComplete: completeTutorial)
+                                PaywallView(
+                                    onComplete: completeTutorial,
+                                    selectedPlan: $paywallSelectedPlan,
+                                    withFreeTrial: $paywallWithFreeTrial,
+                                    isPurchasing: $paywallIsPurchasing
+                                )
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                            } else if card.isReviewRequest {
+                                ReviewRequestCardView()
                                     .frame(width: geometry.size.width, height: geometry.size.height)
                             } else {
                                 TutorialCardView(
@@ -240,6 +262,125 @@ struct TutorialCardView: View {
             return baseSize - 2
         } else {
             return baseSize
+        }
+    }
+}
+
+// MARK: - Review Request Card View
+struct ReviewRequestCardView: View {
+    @Environment(\.requestReview) private var requestReview
+    @State private var animateIn = false
+    @State private var reviewState: ReviewState = .idle
+    
+    enum ReviewState {
+        case idle
+        case loading
+        case completed
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
+            
+            ZStack {
+                Color.white
+                
+                VStack(spacing: isCompact ? 24 : 32) {
+                    Spacer()
+                    
+                    // Main text
+                    Text("Enjoying Scroll The Bible?")
+                        .font(.custom("Georgia", size: isCompact ? 22 : 26))
+                        .fontWeight(.regular)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, isCompact ? 20 : 24)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 15)
+                        .animation(.easeOut(duration: 0.4), value: animateIn)
+                    
+                    // Subtitle
+                    Text("Your review helps others discover God's Word.")
+                        .font(.system(size: isCompact ? 12 : 14, weight: .medium))
+                        .foregroundColor(.gray)
+                        .tracking(1)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(isCompact ? 3 : 4)
+                        .padding(.horizontal, isCompact ? 30 : 40)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 10)
+                        .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
+                    
+                    // Review button / Loading / Thank you
+                    switch reviewState {
+                    case .idle:
+                        Button(action: {
+                            let impact = UIImpactFeedbackGenerator(style: .light)
+                            impact.impactOccurred()
+                            
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                reviewState = .loading
+                            }
+                            
+                            requestReview()
+                            
+                            // Transition to thank you after a delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    reviewState = .completed
+                                }
+                            }
+                        }) {
+                            Text("Yes, I'll leave a review")
+                                .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, isCompact ? 28 : 32)
+                                .padding(.vertical, isCompact ? 14 : 16)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.black)
+                                )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 10)
+                        .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                        
+                    case .loading:
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                                .scaleEffect(0.9)
+                            Text("Loading...")
+                                .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.horizontal, isCompact ? 28 : 32)
+                        .padding(.vertical, isCompact ? 14 : 16)
+                        .background(
+                            Capsule()
+                                .fill(Color.gray.opacity(0.15))
+                        )
+                        .transition(.opacity)
+                        
+                    case .completed:
+                        Text("Thank you!")
+                            .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                            .foregroundColor(.black)
+                            .transition(.opacity)
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                animateIn = true
+            }
+        }
+        .onDisappear {
+            animateIn = false
         }
     }
 }
@@ -583,32 +724,29 @@ struct TutorialExitTrigger: View {
 // MARK: - Paywall View
 struct PaywallView: View {
     var onComplete: (() -> Void)? = nil
+    @EnvironmentObject var subscriptionService: SubscriptionService
     
-    @State private var selectedPlan: SubscriptionPlan = .yearly
-    @State private var withFreeTrial: Bool = false
-    @State private var animateIn = false
+    // State passed from parent to persist across re-renders
+    @Binding var selectedPlan: SubscriptionPlan
+    @Binding var withFreeTrial: Bool
+    @Binding var isPurchasing: Bool
     
     enum SubscriptionPlan {
         case monthly
         case yearly
-        
-        func price(withTrial: Bool) -> String {
-            switch self {
-            case .monthly: return withTrial ? "$4.99" : "$3.99"
-            case .yearly: return withTrial ? "$2.49" : "$1.67"
-            }
-        }
-        
-        var period: String {
-            return "/month"
-        }
-        
-        func savings(withTrial: Bool) -> String? {
-            switch self {
-            case .monthly: return nil
-            case .yearly: return withTrial ? "Save 50%" : "Save 58%"
-            }
-        }
+    }
+    
+    // Convenience init for preview/standalone use
+    init(
+        onComplete: (() -> Void)? = nil,
+        selectedPlan: Binding<SubscriptionPlan> = .constant(.yearly),
+        withFreeTrial: Binding<Bool> = .constant(false),
+        isPurchasing: Binding<Bool> = .constant(false)
+    ) {
+        self.onComplete = onComplete
+        self._selectedPlan = selectedPlan
+        self._withFreeTrial = withFreeTrial
+        self._isPurchasing = isPurchasing
     }
     
     var body: some View {
@@ -631,21 +769,15 @@ struct PaywallView: View {
                             .aspectRatio(contentMode: .fit)
                             .frame(width: isCompact ? 50 : 70, height: isCompact ? 50 : 70)
                             .foregroundColor(.black)
-                            .opacity(animateIn ? 1 : 0)
-                            .scaleEffect(animateIn ? 1 : 0.8)
-                            .animation(.easeOut(duration: 0.5), value: animateIn)
                         
                         Spacer()
                             .frame(height: isCompact ? 16 : 28)
                         
                         // Title
-                        Text("Unlock Bible Scroll")
+                        Text("Unlock Scroll The Bible")
                             .font(.custom("Georgia", size: isCompact ? 24 : 28))
                             .fontWeight(.regular)
                             .foregroundColor(.black)
-                            .opacity(animateIn ? 1 : 0)
-                            .offset(y: animateIn ? 0 : 15)
-                            .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
                         
                         Spacer()
                             .frame(height: isCompact ? 8 : 12)
@@ -655,9 +787,6 @@ struct PaywallView: View {
                             .font(.system(size: isCompact ? 13 : 15, weight: .medium))
                             .foregroundColor(.gray)
                             .tracking(0.5)
-                            .opacity(animateIn ? 1 : 0)
-                            .offset(y: animateIn ? 0 : 10)
-                            .animation(.easeOut(duration: 0.4).delay(0.15), value: animateIn)
                         
                         Spacer()
                             .frame(height: isCompact ? 24 : 40)
@@ -669,9 +798,6 @@ struct PaywallView: View {
                             FeatureRow(text: "Cross-references & context", isCompact: isCompact)
                             FeatureRow(text: "Ad-free experience", isCompact: isCompact)
                         }
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(y: animateIn ? 0 : 15)
-                        .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
                         
                         Spacer()
                             .frame(height: isCompact ? 20 : 32)
@@ -679,9 +805,6 @@ struct PaywallView: View {
                         // Free trial toggle
                         FreeTrialToggle(withFreeTrial: $withFreeTrial, isCompact: isCompact)
                             .padding(.horizontal, horizontalPadding)
-                            .opacity(animateIn ? 1 : 0)
-                            .offset(y: animateIn ? 0 : 15)
-                            .animation(.easeOut(duration: 0.4).delay(0.22), value: animateIn)
                         
                         Spacer()
                             .frame(height: isCompact ? 14 : 20)
@@ -694,7 +817,9 @@ struct PaywallView: View {
                                 isSelected: selectedPlan == .yearly,
                                 withFreeTrial: withFreeTrial,
                                 isCompact: isCompact,
-                                onSelect: { selectedPlan = .yearly }
+                                onSelect: { selectedPlan = .yearly },
+                                getPrice: getPrice,
+                                getSavings: getSavings
                             )
                             
                             // Monthly plan
@@ -703,7 +828,9 @@ struct PaywallView: View {
                                 isSelected: selectedPlan == .monthly,
                                 withFreeTrial: withFreeTrial,
                                 isCompact: isCompact,
-                                onSelect: { selectedPlan = .monthly }
+                                onSelect: { selectedPlan = .monthly },
+                                getPrice: getPrice,
+                                getSavings: getSavings
                             )
                             
                             // No commitment text
@@ -719,50 +846,54 @@ struct PaywallView: View {
                             .padding(.top, isCompact ? 2 : 4)
                         }
                         .padding(.horizontal, horizontalPadding)
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(y: animateIn ? 0 : 15)
-                        .animation(.easeOut(duration: 0.4).delay(0.25), value: animateIn)
                         
                         Spacer()
                             .frame(height: isCompact ? 12 : 16)
                         
                         // Subscribe button
                         Button(action: {
-                            // TODO: Implement subscription purchase
-                            let impact = UIImpactFeedbackGenerator(style: .medium)
-                            impact.impactOccurred()
-                            onComplete?()
+                            Task {
+                                await purchaseSubscription()
+                            }
                         }) {
-                            Text("Continue")
-                                .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, isCompact ? 14 : 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .fill(Color.black)
-                                )
+                            HStack(spacing: 8) {
+                                if isPurchasing {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.9)
+                                }
+                                Text(isPurchasing ? "Processing..." : "Continue")
+                                    .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, isCompact ? 14 : 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(isPurchasing ? Color.gray : Color.black)
+                            )
                         }
                         .buttonStyle(PlainButtonStyle())
                         .padding(.horizontal, horizontalPadding)
-                        .opacity(animateIn ? 1 : 0)
-                        .scaleEffect(animateIn ? 1 : 0.95)
-                        .animation(.easeOut(duration: 0.4).delay(0.3), value: animateIn)
+                        .disabled(isPurchasing)
                         
                         Spacer()
                             .frame(height: isCompact ? 10 : 16)
                         
                         // Restore purchases
                         Button(action: {
-                            // TODO: Implement restore purchases
+                            Task {
+                                await subscriptionService.restorePurchases()
+                                if subscriptionService.isPremium {
+                                    onComplete?()
+                                }
+                            }
                         }) {
                             Text("Restore Purchases")
                                 .font(.system(size: isCompact ? 11 : 13, weight: .medium))
                                 .foregroundColor(.gray)
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .opacity(animateIn ? 1 : 0)
-                        .animation(.easeOut(duration: 0.4).delay(0.35), value: animateIn)
                         
                         Spacer()
                             .frame(height: isCompact ? 16 : 30)
@@ -778,21 +909,61 @@ struct PaywallView: View {
                         .font(.system(size: isCompact ? 10 : 11, weight: .regular))
                         .foregroundColor(.gray.opacity(0.7))
                         .padding(.bottom, isCompact ? 20 : 30)
-                        .opacity(animateIn ? 1 : 0)
-                        .animation(.easeOut(duration: 0.4).delay(0.4), value: animateIn)
                     }
                     .frame(minHeight: geometry.size.height)
                 }
                 .scrollDisabled(geometry.size.height >= 700)
             }
         }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                animateIn = true
-            }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func purchaseSubscription() async {
+        // Capture current selections before any async work
+        let currentPlan = selectedPlan
+        let currentTrial = withFreeTrial
+        
+        isPurchasing = true
+        
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+        
+        guard let product = subscriptionService.getProduct(
+            yearly: currentPlan == .yearly,
+            withTrial: currentTrial
+        ) else {
+            print("❌ Product not found")
+            isPurchasing = false
+            return
         }
-        .onDisappear {
-            animateIn = false
+        
+        let success = await subscriptionService.purchase(product)
+        
+        isPurchasing = false
+        if success {
+            // Complete tutorial on successful purchase
+            onComplete?()
+        }
+    }
+    
+    private func getPrice(for plan: SubscriptionPlan, withTrial: Bool) -> String {
+        if let product = subscriptionService.getProduct(yearly: plan == .yearly, withTrial: withTrial) {
+            return product.displayPrice
+        }
+        // Fallback to hardcoded prices
+        switch (plan, withTrial) {
+        case (.monthly, false): return "$3.99"
+        case (.monthly, true): return "$4.99"
+        case (.yearly, false): return "$19.99"
+        case (.yearly, true): return "$29.99"
+        }
+    }
+    
+    private func getSavings(for plan: SubscriptionPlan, withTrial: Bool) -> String? {
+        switch plan {
+        case .monthly: return nil
+        case .yearly: return withTrial ? "Save 50%" : "Save 58%"
         }
     }
 }
@@ -876,6 +1047,8 @@ struct SubscriptionOptionView: View {
     let withFreeTrial: Bool
     var isCompact: Bool = false
     let onSelect: () -> Void
+    let getPrice: (PaywallView.SubscriptionPlan, Bool) -> String
+    let getSavings: (PaywallView.SubscriptionPlan, Bool) -> String?
     
     var body: some View {
         Button(action: onSelect) {
@@ -899,7 +1072,7 @@ struct SubscriptionOptionView: View {
                             .font(.system(size: isCompact ? 14 : 16, weight: .medium))
                             .foregroundColor(.black)
                         
-                        if let savings = plan.savings(withTrial: withFreeTrial) {
+                        if let savings = getSavings(plan, withFreeTrial) {
                             Text(savings)
                                 .font(.system(size: isCompact ? 9 : 11, weight: .bold))
                                 .foregroundColor(.white)
@@ -918,10 +1091,10 @@ struct SubscriptionOptionView: View {
                 
                 // Price
                 HStack(alignment: .firstTextBaseline, spacing: 1) {
-                    Text(plan.price(withTrial: withFreeTrial))
+                    Text(plan == .yearly ? (withFreeTrial ? "$2.49" : "$1.67") : getPrice(plan, withFreeTrial))
                         .font(.system(size: isCompact ? 16 : 18, weight: .semibold))
                         .foregroundColor(.black)
-                    Text(plan.period)
+                    Text("/month")
                         .font(.system(size: isCompact ? 10 : 12, weight: .regular))
                         .foregroundColor(.gray)
                 }

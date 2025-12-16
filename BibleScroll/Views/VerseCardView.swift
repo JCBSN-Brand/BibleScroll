@@ -133,6 +133,7 @@ struct HeartAnimationView: View {
 struct VerseCardView: View {
     let verse: Verse
     @ObservedObject var favoritesViewModel: FavoritesViewModel
+    @ObservedObject var authService: AuthService
     
     @State private var showingNotes = false
     @State private var showingAIStudy = false
@@ -227,7 +228,7 @@ struct VerseCardView: View {
             }
         }
         .sheet(isPresented: $showingAIStudy) {
-            AIStudyView(verse: verse, isPresented: $showingAIStudy)
+            AIStudyView(verse: verse, isPresented: $showingAIStudy, authService: authService)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -270,6 +271,7 @@ struct VerseCardView: View {
 #Preview {
     VerseCardView(
         verse: Verse.sampleVerses[0],
-        favoritesViewModel: FavoritesViewModel()
+        favoritesViewModel: FavoritesViewModel(),
+        authService: AuthService()
     )
 }

@@ -20,7 +20,7 @@ struct LaunchScreenView: View {
                     .font(.system(size: 64))
                     .foregroundColor(.black)
                 
-                Text("Bible Scroll")
+                Text("Scroll The Bible")
                     .font(.custom("Georgia", size: 28))
                     .fontWeight(.medium)
                     .foregroundColor(.black)

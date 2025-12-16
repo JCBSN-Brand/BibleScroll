@@ -49,9 +49,44 @@ class BibleViewModel: ObservableObject {
     init(apiService: BibleAPIService = BibleAPIService()) {
         self.apiService = apiService
         
+        // Load saved reading position or default to Genesis 1
+        loadSavedPosition()
+        
         // Load initial chapter
         Task {
             await loadChapter(book: currentBook, chapter: currentChapter)
+        }
+    }
+    
+    // MARK: - Reading Position Persistence
+    
+    /// Save current reading position to UserDefaults
+    private func saveReadingPosition() {
+        UserDefaults.standard.set(currentBook, forKey: "lastBook")
+        UserDefaults.standard.set(currentChapter, forKey: "lastChapter")
+        UserDefaults.standard.set(currentVerseIndex, forKey: "lastVerseIndex")
+        UserDefaults.standard.set(currentTranslation.rawValue, forKey: "lastTranslation")
+    }
+    
+    /// Load saved reading position from UserDefaults
+    private func loadSavedPosition() {
+        if let savedBook = UserDefaults.standard.string(forKey: "lastBook") {
+            currentBook = savedBook
+        }
+        
+        let savedChapter = UserDefaults.standard.integer(forKey: "lastChapter")
+        if savedChapter > 0 {
+            currentChapter = savedChapter
+        }
+        
+        let savedVerseIndex = UserDefaults.standard.integer(forKey: "lastVerseIndex")
+        if savedVerseIndex >= 0 {
+            currentVerseIndex = savedVerseIndex
+        }
+        
+        if let savedTranslationRaw = UserDefaults.standard.string(forKey: "lastTranslation"),
+           let savedTranslation = BibleTranslation(rawValue: savedTranslationRaw) {
+            currentTranslation = savedTranslation
         }
     }
     
@@ -70,6 +105,9 @@ class BibleViewModel: ObservableObject {
             self.currentChapter = chapter
             self.currentVerseIndex = 0
             self.isLoading = false
+            
+            // Save reading position
+            saveReadingPosition()
         } catch {
             self.error = error.localizedDescription
             self.isLoading = false
@@ -123,11 +161,13 @@ class BibleViewModel: ObservableObject {
     func goToVerse(_ index: Int) {
         guard index >= 0 && index < verses.count else { return }
         currentVerseIndex = index
+        saveReadingPosition()
     }
     
     /// Update current verse index when user scrolls
     func updateCurrentVerse(to index: Int) {
         currentVerseIndex = index
+        saveReadingPosition()
     }
 }
 

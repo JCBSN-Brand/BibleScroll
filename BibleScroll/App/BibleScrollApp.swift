@@ -10,6 +10,8 @@ import SwiftData
 
 @main
 struct BibleScrollApp: App {
+    @StateObject private var subscriptionService = SubscriptionService()
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Favorite.self,
@@ -27,6 +29,7 @@ struct BibleScrollApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(subscriptionService)
         }
         .modelContainer(sharedModelContainer)
     }

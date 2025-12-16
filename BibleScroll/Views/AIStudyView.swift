@@ -10,9 +10,12 @@ import SwiftUI
 struct AIStudyView: View {
     let verse: Verse
     @Binding var isPresented: Bool
+    @ObservedObject var authService: AuthService
     
     @StateObject private var aiService = AIStudyService()
     @State private var selectedMode: AIStudyMode?
+    @State private var showingPaywall = false
+    @State private var paywallDetent: PresentationDetent = .large
     
     var body: some View {
         NavigationStack {
@@ -50,6 +53,15 @@ struct AIStudyView: View {
                         .foregroundColor(.gray)
                     }
                 }
+            }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallDrawerView(isPresented: $showingPaywall)
+                    .presentationDetents([.medium, .large], selection: $paywallDetent)
+                    .presentationDragIndicator(.visible)
+                    .onDisappear {
+                        // Reset to .large for next presentation
+                        paywallDetent = .large
+                    }
             }
         }
     }
@@ -99,9 +111,16 @@ struct AIStudyView: View {
     
     private func optionRow(_ mode: AIStudyMode) -> some View {
         Button(action: {
-            selectedMode = mode
-            Task {
-                await aiService.study(verse: verse, mode: mode)
+            // Check if user is premium before allowing access
+            if authService.isPremium {
+                // Premium user - allow access
+                selectedMode = mode
+                Task {
+                    await aiService.study(verse: verse, mode: mode)
+                }
+            } else {
+                // Non-premium user - show paywall
+                showingPaywall = true
             }
         }) {
             HStack(spacing: 16) {
@@ -269,7 +288,8 @@ struct AIStudyView: View {
 #Preview {
     AIStudyView(
         verse: Verse.sampleVerses[0],
-        isPresented: .constant(true)
+        isPresented: .constant(true),
+        authService: AuthService()
     )
 }
 

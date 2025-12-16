@@ -16,6 +16,7 @@
 		A100000D245678900000007 /* BibleAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000E245678900000007 /* BibleAPIService.swift */; };
 		A100000F245678900000008 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010245678900000008 /* StorageService.swift */; };
 		A1000011245678900000009 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012245678900000009 /* AuthService.swift */; };
+		A1000043245678900000034 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000044245678900000034 /* SubscriptionService.swift */; };
 		A1000013245678900000010 /* BibleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000014245678900000010 /* BibleViewModel.swift */; };
 		A1000015245678900000011 /* FavoritesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016245678900000011 /* FavoritesViewModel.swift */; };
 		A1000017245678900000012 /* MainScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018245678900000012 /* MainScrollView.swift */; };
@@ -38,6 +39,7 @@
 		A100003B245678900000030 /* AIStudyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003C245678900000030 /* AIStudyService.swift */; };
 		A100003D245678900000031 /* AIStudyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003E245678900000031 /* AIStudyView.swift */; };
 		A100003F245678900000032 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000040245678900000032 /* TutorialView.swift */; };
+		A1000041245678900000033 /* PaywallDrawerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000042245678900000033 /* PaywallDrawerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -51,6 +53,7 @@
 		A100000E245678900000007 /* BibleAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAPIService.swift; sourceTree = "<group>"; };
 		A1000010245678900000008 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		A1000012245678900000009 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		A1000044245678900000034 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
 		A1000014245678900000010 /* BibleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleViewModel.swift; sourceTree = "<group>"; };
 		A1000016245678900000011 /* FavoritesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesViewModel.swift; sourceTree = "<group>"; };
 		A1000018245678900000012 /* MainScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScrollView.swift; sourceTree = "<group>"; };
@@ -73,6 +76,7 @@
 		A100003C245678900000030 /* AIStudyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStudyService.swift; sourceTree = "<group>"; };
 		A100003E245678900000031 /* AIStudyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStudyView.swift; sourceTree = "<group>"; };
 		A1000040245678900000032 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
+		A1000042245678900000033 /* PaywallDrawerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallDrawerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -145,6 +149,7 @@
 				A1000032245678900000025 /* SearchView.swift */,
 				A1000034245678900000026 /* TranslationPickerView.swift */,
 				A1000040245678900000032 /* TutorialView.swift */,
+				A1000042245678900000033 /* PaywallDrawerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -167,6 +172,7 @@
 				A1000036245678900000027 /* KJVBibleData.swift */,
 				A1000010245678900000008 /* StorageService.swift */,
 				A1000012245678900000009 /* AuthService.swift */,
+				A1000044245678900000034 /* SubscriptionService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -276,6 +282,7 @@
 				A100000D245678900000007 /* BibleAPIService.swift in Sources */,
 				A100000F245678900000008 /* StorageService.swift in Sources */,
 				A1000011245678900000009 /* AuthService.swift in Sources */,
+				A1000043245678900000034 /* SubscriptionService.swift in Sources */,
 				A1000027245678900000020 /* APIConfig.swift in Sources */,
 				A1000035245678900000027 /* KJVBibleData.swift in Sources */,
 				A1000013245678900000010 /* BibleViewModel.swift in Sources */,
@@ -295,6 +302,7 @@
 				A100003B245678900000030 /* AIStudyService.swift in Sources */,
 				A100003D245678900000031 /* AIStudyView.swift in Sources */,
 				A100003F245678900000032 /* TutorialView.swift in Sources */,
+				A1000041245678900000033 /* PaywallDrawerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -431,7 +439,7 @@
 				DEVELOPMENT_TEAM = 39MMRPHXS2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bible Scroll";
+				INFOPLIST_KEY_CFBundleDisplayName = "Scroll The Bible";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -442,7 +450,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.BibleScroll;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gabrieljacobson.biblescroll;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -463,7 +471,7 @@
 				DEVELOPMENT_TEAM = 39MMRPHXS2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bible Scroll";
+				INFOPLIST_KEY_CFBundleDisplayName = "Scroll The Bible";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -474,7 +482,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.BibleScroll;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gabrieljacobson.biblescroll;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

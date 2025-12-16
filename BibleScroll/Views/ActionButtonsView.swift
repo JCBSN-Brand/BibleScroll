@@ -75,7 +75,7 @@ struct ActionButtonsView: View {
     }
     
     private var shareText: String {
-        "\"\(verse.text)\"\n\n— \(verse.reference)\n\nFrom Bible Scroll app\n\(appStoreLink)"
+        "\"\(verse.text)\"\n\n— \(verse.reference)\n\nFrom Scroll The Bible app\n\(appStoreLink)"
     }
 }
 
