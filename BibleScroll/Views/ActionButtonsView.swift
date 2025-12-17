@@ -7,8 +7,27 @@
 
 import SwiftUI
 
-// App Store link for sharing - UPDATE THIS when app is live
-private let appStoreLink = "YOUR_APP_STORE_LINK_HERE"
+// App Store link for sharing
+private let appStoreLink = "https://apps.apple.com/app/scroll-the-bible/id6756558351"
+
+// Fun, catchy hooks that rotate randomly when sharing
+private let shareHooks: [String] = [
+    "Okay wait, you HAVE to see this 👀",
+    "Stop what you're doing. This is actually insane.",
+    "I'm not even kidding, this changed everything for me",
+    "So I found this and now I can't stop using it",
+    "You're gonna thank me for this one",
+    "Why did nobody tell me about this sooner?!",
+    "This is lowkey the best thing on my phone rn",
+    "I know you're busy but PLEASE look at this",
+    "Okay but this verse hit different:",
+    "Not me getting hooked on a Bible app but HERE WE ARE",
+    "No but seriously, you need this in your life",
+    "Just trust me on this one 🙏",
+    "I literally can't stop scrolling through this",
+    "This is the sign you've been waiting for:",
+    "POV: You just found your new daily habit",
+]
 
 // Button style used by action buttons and crown button
 struct FastPopButtonStyle: ButtonStyle {
@@ -75,7 +94,8 @@ struct ActionButtonsView: View {
     }
     
     private var shareText: String {
-        "\"\(verse.text)\"\n\n— \(verse.reference)\n\nFrom Scroll The Bible app\n\(appStoreLink)"
+        let hook = shareHooks.randomElement() ?? shareHooks[0]
+        return "\(hook)\n\n\"\(verse.text)\"\n\n— \(verse.reference)\n\n\(appStoreLink)"
     }
 }
 

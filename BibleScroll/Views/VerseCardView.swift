@@ -12,12 +12,13 @@ struct AnimatedHeart: Identifiable {
     let id = UUID()
     let position: CGPoint
     let rotation: Double      // Slight random tilt for variety
-    let driftDirection: CGFloat  // Random left/right drift when floating up
+    let targetPosition: CGPoint  // Where the heart should fly to (crown)
 }
 
 // Crown button with touch-responsive animation and haptics
 struct CrownButton: View {
     let action: () -> Void
+    @Binding var heartImpactScale: CGFloat  // External control for heart slam impact
     
     @State private var scale: CGFloat = 1.0
     @State private var isTouching = false
@@ -35,7 +36,7 @@ struct CrownButton: View {
                     .fill(Color.white)
                     .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
             )
-            .scaleEffect(scale)
+            .scaleEffect(scale * heartImpactScale)  // Combine both scales
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
@@ -79,12 +80,12 @@ struct CrownButton: View {
 struct HeartAnimationView: View {
     let heart: AnimatedHeart
     let size: CGFloat
+    let onImpact: () -> Void   // Called when heart reaches the crown
     let onComplete: () -> Void
     
     @State private var scale: CGFloat = 0.6
     @State private var opacity: Double = 0
-    @State private var xOffset: CGFloat = 0
-    @State private var yOffset: CGFloat = 0
+    @State private var currentPosition: CGPoint = .zero
     
     var body: some View {
         Image("bxs-heart")
@@ -96,9 +97,10 @@ struct HeartAnimationView: View {
             .scaleEffect(scale)
             .opacity(opacity)
             .rotationEffect(.degrees(heart.rotation))
-            .offset(x: xOffset, y: yOffset)
-            .position(heart.position)
+            .position(currentPosition)
             .onAppear {
+                currentPosition = heart.position
+                
                 // Phase 1: Quick spring pop with overshoot (0.6 → 1.2)
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.5, blendDuration: 0)) {
                     scale = 1.2
@@ -112,23 +114,35 @@ struct HeartAnimationView: View {
                     }
                 }
                 
-                // Phase 3: Exit - float up with drift, fade out, scale down
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    withAnimation(.easeOut(duration: 0.7)) {
-                        yOffset = -90
-                        xOffset = heart.driftDirection * 1.3
-                        opacity = 0
-                        scale = 0.8
+                // Phase 3: SLAM DUNK - fly toward the crown with a curve!
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    // Shrink while flying
+                    withAnimation(.easeIn(duration: 0.35)) {
+                        scale = 0.4
+                        currentPosition = heart.targetPosition
                     }
                     
-                    // Cleanup after exit animation completes
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                    // Fade out right at impact
+                    withAnimation(.easeIn(duration: 0.35).delay(0.2)) {
+                        opacity = 0
+                    }
+                    
+                    // Trigger impact when heart arrives at crown
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+                        onImpact()
+                    }
+                    
+                    // Cleanup after animation completes
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                         onComplete()
                     }
                 }
             }
     }
 }
+
+// Coordinate space for tracking crown position
+private let verseCardCoordinateSpace = "VerseCardSpace"
 
 struct VerseCardView: View {
     let verse: Verse
@@ -139,6 +153,8 @@ struct VerseCardView: View {
     @State private var showingAIStudy = false
     @State private var noteText = ""
     @State private var animatedHearts: [AnimatedHeart] = []
+    @State private var crownPosition: CGPoint = .zero  // Track where crown is
+    @State private var crownImpactScale: CGFloat = 1.0  // For slam dunk bounce
     
     var body: some View {
         ZStack {
@@ -170,9 +186,16 @@ struct VerseCardView: View {
                 
                 // Multiple hearts animation overlay (shown on double-tap at tap location)
                 ForEach(animatedHearts) { heart in
-                    HeartAnimationView(heart: heart, size: 100) {
-                        animatedHearts.removeAll { $0.id == heart.id }
-                    }
+                    HeartAnimationView(
+                        heart: heart,
+                        size: 100,
+                        onImpact: {
+                            triggerCrownImpact()
+                        },
+                        onComplete: {
+                            animatedHearts.removeAll { $0.id == heart.id }
+                        }
+                    )
                 }
             }
             .contentShape(Rectangle())
@@ -185,9 +208,22 @@ struct VerseCardView: View {
             
             // Crown button - centered below header (AI Study)
             VStack {
-                CrownButton(action: {
-                    showingAIStudy = true
-                })
+                CrownButton(
+                    action: {
+                        showingAIStudy = true
+                    },
+                    heartImpactScale: $crownImpactScale
+                )
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear {
+                                // Get the center of the crown button in the coordinate space
+                                let frame = geo.frame(in: .named(verseCardCoordinateSpace))
+                                crownPosition = CGPoint(x: frame.midX, y: frame.midY)
+                            }
+                    }
+                )
                 .padding(.top, 160)
                 
                 Spacer()
@@ -212,6 +248,7 @@ struct VerseCardView: View {
                 .padding(.bottom, 120)
             }
         }
+        .coordinateSpace(name: verseCardCoordinateSpace)
         .sheet(isPresented: $showingNotes) {
             NotesSheetView(
                 verse: verse,
@@ -234,6 +271,25 @@ struct VerseCardView: View {
         }
     }
     
+    // Trigger the crown "got hit" bounce effect
+    private func triggerCrownImpact() {
+        // Heavy haptic for the slam dunk impact
+        let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+        impactFeedback.impactOccurred()
+        
+        // Squish down on impact
+        withAnimation(.easeOut(duration: 0.08)) {
+            crownImpactScale = 0.85
+        }
+        
+        // Bounce back up with overshoot
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.4)) {
+                crownImpactScale = 1.0
+            }
+        }
+    }
+    
     // Double-tap to like/favorite at specific location
     private func doubleTapToLike(at location: CGPoint) {
         // Add to favorites (if not already favorited, this will add it; if already favorited, we still show the animation)
@@ -245,10 +301,9 @@ struct VerseCardView: View {
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.impactOccurred()
         
-        // Create heart at tap location with slight random rotation and drift
+        // Create heart at tap location, targeting the crown
         let randomRotation = Double.random(in: -15...15)
-        let randomDrift = CGFloat.random(in: -25...25)  // Drift left or right as it floats up
-        let newHeart = AnimatedHeart(position: location, rotation: randomRotation, driftDirection: randomDrift)
+        let newHeart = AnimatedHeart(position: location, rotation: randomRotation, targetPosition: crownPosition)
         animatedHearts.append(newHeart)
     }
     

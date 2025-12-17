@@ -143,6 +143,7 @@ struct TutorialView: View {
                             } else {
                                 TutorialCardView(
                                     card: card,
+                                    cardIndex: index,
                                     isLastCard: index == cards.count - 1,
                                     onComplete: completeTutorial
                                 )
@@ -191,11 +192,20 @@ struct TutorialView: View {
 
 // MARK: - Tutorial Card View (styled like verse)
 struct TutorialCardView: View {
+    // Static tracking to survive view recreation during app lifecycle
+    private static var animatedCardIDs: Set<String> = []
+    
     let card: TutorialCard
+    let cardIndex: Int
     let isLastCard: Bool
     let onComplete: () -> Void
     
     @State private var animateIn = false
+    
+    // Unique key for this card that's stable across view recreations
+    private var cardKey: String {
+        "tutorial-card-\(cardIndex)"
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -254,6 +264,10 @@ struct TutorialCardView: View {
             }
         }
         .onAppear {
+            // Use static tracking to prevent double-animation across view recreations
+            guard !Self.animatedCardIDs.contains(cardKey) else { return }
+            Self.animatedCardIDs.insert(cardKey)
+            
             // Slight delay to trigger animation after view appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 animateIn = true
@@ -261,7 +275,14 @@ struct TutorialCardView: View {
         }
         .onDisappear {
             animateIn = false
+            // Remove from tracking so animation plays again when scrolling back
+            Self.animatedCardIDs.remove(cardKey)
         }
+    }
+    
+    // Static method to reset animation tracking (call when tutorial completes)
+    static func resetAnimationTracking() {
+        animatedCardIDs.removeAll()
     }
     
     private func dynamicFontSize(for text: String, isCompact: Bool) -> CGFloat {
@@ -279,7 +300,11 @@ struct TutorialCardView: View {
 
 // MARK: - Review Request Card View
 struct ReviewRequestCardView: View {
+    // Static tracking to survive view recreation during app lifecycle
+    private static var hasAnimated = false
+    
     @Environment(\.requestReview) private var requestReview
+    @AppStorage("hasLeftReview") private var hasLeftReview = false
     @State private var animateIn = false
     @State private var reviewState: ReviewState = .idle
     
@@ -323,9 +348,18 @@ struct ReviewRequestCardView: View {
                         .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
                     
                     // Review button / Loading / Thank you
-                    switch reviewState {
-                    case .idle:
+                    if reviewState == .completed {
+                        Text("Thank you!")
+                            .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                            .foregroundColor(.black)
+                            .transition(.opacity)
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 10)
+                            .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                    } else {
                         Button(action: {
+                            guard reviewState == .idle else { return }
+                            
                             let impact = UIImpactFeedbackGenerator(style: .light)
                             impact.impactOccurred()
                             
@@ -333,6 +367,10 @@ struct ReviewRequestCardView: View {
                                 reviewState = .loading
                             }
                             
+                            // Mark that user has engaged with review - prevents future review prompts
+                            hasLeftReview = true
+                            
+                            // Show the Apple review prompt
                             requestReview()
                             
                             // Transition to thank you after a delay
@@ -342,41 +380,26 @@ struct ReviewRequestCardView: View {
                                 }
                             }
                         }) {
-                            Text("Yes, I'll leave a review")
-                                .font(.system(size: isCompact ? 14 : 16, weight: .medium))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, isCompact ? 28 : 32)
-                                .padding(.vertical, isCompact ? 14 : 16)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.black)
-                                )
+                            HStack(spacing: 10) {
+                                if reviewState == .loading {
+                                    CrownLoadingView(size: 16, tint: .white)
+                                }
+                                Text(reviewState == .loading ? "Loading..." : "Yes, I'll leave a review")
+                                    .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, isCompact ? 28 : 32)
+                            .padding(.vertical, isCompact ? 14 : 16)
+                            .background(
+                                Capsule()
+                                    .fill(reviewState == .loading ? Color.gray : Color.black)
+                            )
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .disabled(reviewState == .loading)
                         .opacity(animateIn ? 1 : 0)
                         .offset(y: animateIn ? 0 : 10)
                         .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
-                        
-                    case .loading:
-                        HStack(spacing: 10) {
-                            CrownLoadingView(size: 16, tint: .gray)
-                            Text("Loading...")
-                                .font(.system(size: isCompact ? 14 : 16, weight: .medium))
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.horizontal, isCompact ? 28 : 32)
-                        .padding(.vertical, isCompact ? 14 : 16)
-                        .background(
-                            Capsule()
-                                .fill(Color.gray.opacity(0.15))
-                        )
-                        .transition(.opacity)
-                        
-                    case .completed:
-                        Text("Thank you!")
-                            .font(.system(size: isCompact ? 14 : 16, weight: .medium))
-                            .foregroundColor(.black)
-                            .transition(.opacity)
                     }
                     
                     Spacer()
@@ -384,23 +407,37 @@ struct ReviewRequestCardView: View {
             }
         }
         .onAppear {
+            guard !Self.hasAnimated else { return }
+            Self.hasAnimated = true
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 animateIn = true
             }
         }
         .onDisappear {
             animateIn = false
+            Self.hasAnimated = false
         }
     }
 }
 
 // MARK: - Share Request Card View
 struct ShareRequestCardView: View {
+    // Static tracking to survive view recreation during app lifecycle
+    private static var hasAnimated = false
+    
     @State private var animateIn = false
     @State private var showingShareSheet = false
+    @State private var shareState: ShareState = .idle
+    
+    enum ShareState {
+        case idle
+        case loading
+        case completed
+    }
     
     // App Store URL for sharing
-    private let appStoreURL = "https://apps.apple.com/app/scroll-the-bible/id6745408638"
+    private let appStoreURL = "https://apps.apple.com/app/scroll-the-bible/id6756558351"
     
     var body: some View {
         GeometryReader { geometry in
@@ -443,40 +480,72 @@ struct ShareRequestCardView: View {
                         .offset(y: animateIn ? 0 : 10)
                         .animation(.easeOut(duration: 0.4).delay(0.15), value: animateIn)
                     
-                    // Share button
-                    Button(action: {
-                        let impact = UIImpactFeedbackGenerator(style: .light)
-                        impact.impactOccurred()
-                        showingShareSheet = true
-                    }) {
-                        Text("Share the app")
+                    // Share button / Loading / Thank you
+                    if shareState == .completed {
+                        Text("Thank you!")
                             .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                            .foregroundColor(.black)
+                            .transition(.opacity)
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 10)
+                            .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                    } else {
+                        Button(action: {
+                            guard shareState == .idle else { return }
+                            
+                            let impact = UIImpactFeedbackGenerator(style: .light)
+                            impact.impactOccurred()
+                            
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                shareState = .loading
+                            }
+                            
+                            showingShareSheet = true
+                        }) {
+                            HStack(spacing: 10) {
+                                if shareState == .loading {
+                                    CrownLoadingView(size: 16, tint: .white)
+                                }
+                                Text(shareState == .loading ? "Loading..." : "Share the app")
+                                    .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                            }
                             .foregroundColor(.white)
                             .padding(.horizontal, isCompact ? 28 : 32)
                             .padding(.vertical, isCompact ? 14 : 16)
                             .background(
                                 Capsule()
-                                    .fill(Color.black)
+                                    .fill(shareState == .loading ? Color.gray : Color.black)
                             )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .disabled(shareState == .loading)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 10)
+                        .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .opacity(animateIn ? 1 : 0)
-                    .offset(y: animateIn ? 0 : 10)
-                    .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
                     
                     Spacer()
                 }
             }
         }
         .onAppear {
+            guard !Self.hasAnimated else { return }
+            Self.hasAnimated = true
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 animateIn = true
             }
         }
         .onDisappear {
             animateIn = false
+            Self.hasAnimated = false
         }
-        .sheet(isPresented: $showingShareSheet) {
+        .sheet(isPresented: $showingShareSheet, onDismiss: {
+            // Transition to thank you when share sheet is dismissed
+            withAnimation(.easeInOut(duration: 0.3)) {
+                shareState = .completed
+            }
+        }) {
             ShareSheet(items: [URL(string: appStoreURL)!])
         }
     }

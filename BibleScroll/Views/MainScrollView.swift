@@ -468,6 +468,9 @@ struct ReviewCardView: View {
                                 reviewState = .loading
                             }
                             
+                            // Mark that user has engaged with review - prevents future review prompts
+                            hasLeftReview = true
+                            
                             // Show the App Store review prompt
                             requestReview()
                             
@@ -525,10 +528,6 @@ struct ReviewCardView: View {
             }
         }
         .onDisappear {
-            // Only mark review as complete when scrolling away AFTER they clicked yes
-            if reviewState == .completed {
-                hasLeftReview = true
-            }
             animateIn = false
         }
     }
@@ -544,7 +543,7 @@ struct ShareCardView: View {
     @State private var pulseRing = false
     
     // App Store URL for sharing
-    private let appStoreURL = "https://apps.apple.com/app/scroll-the-bible/id6745408638"
+    private let appStoreURL = "https://apps.apple.com/app/scroll-the-bible/id6756558351"
     
     // Fun, hook-y headlines that rotate randomly
     private let headlines: [(main: String, sub: String)] = [
