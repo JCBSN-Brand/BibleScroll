@@ -16,13 +16,15 @@ struct TutorialCard: Identifiable {
     let buttonDemo: TutorialButtonDemo?
     let isPaywall: Bool
     let isReviewRequest: Bool
+    let isShareRequest: Bool
     
-    init(mainText: String, subtitleText: String, buttonDemo: TutorialButtonDemo? = nil, isPaywall: Bool = false, isReviewRequest: Bool = false) {
+    init(mainText: String, subtitleText: String, buttonDemo: TutorialButtonDemo? = nil, isPaywall: Bool = false, isReviewRequest: Bool = false, isShareRequest: Bool = false) {
         self.mainText = mainText
         self.subtitleText = subtitleText
         self.buttonDemo = buttonDemo
         self.isPaywall = isPaywall
         self.isReviewRequest = isReviewRequest
+        self.isShareRequest = isShareRequest
     }
 }
 
@@ -101,6 +103,12 @@ struct TutorialView: View {
             subtitleText: "",
             isReviewRequest: true
         ),
+        // Share request card
+        TutorialCard(
+            mainText: "",
+            subtitleText: "",
+            isShareRequest: true
+        ),
         TutorialCard(
             mainText: "You're all set!",
             subtitleText: "Start exploring God's Word."
@@ -128,6 +136,9 @@ struct TutorialView: View {
                                 .frame(width: geometry.size.width, height: geometry.size.height)
                             } else if card.isReviewRequest {
                                 ReviewRequestCardView()
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                            } else if card.isShareRequest {
+                                ShareRequestCardView()
                                     .frame(width: geometry.size.width, height: geometry.size.height)
                             } else {
                                 TutorialCardView(
@@ -383,6 +394,105 @@ struct ReviewRequestCardView: View {
             animateIn = false
         }
     }
+}
+
+// MARK: - Share Request Card View
+struct ShareRequestCardView: View {
+    @State private var animateIn = false
+    @State private var showingShareSheet = false
+    
+    // App Store URL for sharing
+    private let appStoreURL = "https://apps.apple.com/app/scroll-the-bible/id6745408638"
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
+            
+            ZStack {
+                Color.white
+                
+                VStack(spacing: isCompact ? 24 : 32) {
+                    Spacer()
+                    
+                    // Share icon
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: isCompact ? 40 : 48, weight: .medium))
+                        .foregroundColor(.black)
+                        .opacity(animateIn ? 1 : 0)
+                        .scaleEffect(animateIn ? 1 : 0.8)
+                        .animation(.easeOut(duration: 0.5), value: animateIn)
+                    
+                    // Main text
+                    Text("Share with a friend?")
+                        .font(.custom("Georgia", size: isCompact ? 22 : 26))
+                        .fontWeight(.regular)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, isCompact ? 20 : 24)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 15)
+                        .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
+                    
+                    // Subtitle
+                    Text("Help others discover God's Word.")
+                        .font(.system(size: isCompact ? 12 : 14, weight: .medium))
+                        .foregroundColor(.gray)
+                        .tracking(1)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(isCompact ? 3 : 4)
+                        .padding(.horizontal, isCompact ? 30 : 40)
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 10)
+                        .animation(.easeOut(duration: 0.4).delay(0.15), value: animateIn)
+                    
+                    // Share button
+                    Button(action: {
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                        showingShareSheet = true
+                    }) {
+                        Text("Share the app")
+                            .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, isCompact ? 28 : 32)
+                            .padding(.vertical, isCompact ? 14 : 16)
+                            .background(
+                                Capsule()
+                                    .fill(Color.black)
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 10)
+                    .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                    
+                    Spacer()
+                }
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                animateIn = true
+            }
+        }
+        .onDisappear {
+            animateIn = false
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            ShareSheet(items: [URL(string: appStoreURL)!])
+        }
+    }
+}
+
+// MARK: - Share Sheet (UIKit wrapper)
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Tutorial Button Demo View

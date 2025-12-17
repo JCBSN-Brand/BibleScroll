@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import StoreKit
 
 struct MainScrollView: View {
     @ObservedObject var viewModel: BibleViewModel
@@ -16,6 +17,19 @@ struct MainScrollView: View {
     @State private var scrollPosition: Int?
     @State private var isLoadingNextChapter: Bool = false
     @State private var contentOpacity: Double = 1.0
+    
+    // Review prompt tracking
+    @AppStorage("hasLeftReview") private var hasLeftReview = false
+    
+    // Grace period tracking - no ads for first 20 verses after tutorial
+    @AppStorage("totalVersesViewed") private var totalVersesViewed = 0
+    private let gracePeriodVerses = 20
+    
+    // Show review card at these verse intervals (every ~25-30 verses, avoiding paywall multiples of 20)
+    private let reviewIntervals: Set<Int> = [8, 35, 65, 95, 125]
+    
+    // Show share card more rarely (every ~30-40 verses, always shows)
+    private let shareIntervals: Set<Int> = [12, 52, 92, 132]
     
     var body: some View {
         GeometryReader { geometry in
@@ -56,11 +70,28 @@ struct MainScrollView: View {
                             .opacity(contentOpacity)
                             .id(index)
                             
-                            // Show paywall every 20 verses for non-premium users
-                            if !authService.isPremium && (index + 1) % 20 == 0 && index < viewModel.verses.count - 1 {
-                                PaywallCardView()
-                                    .frame(width: geometry.size.width, height: geometry.size.height)
-                                    .id("paywall-\(index)")
+                            // Only show promotional cards after grace period (first 20 verses)
+                            if totalVersesViewed >= gracePeriodVerses {
+                                // Show review card at specific intervals if user hasn't left a review yet
+                                if !hasLeftReview && reviewIntervals.contains(index + 1) && index < viewModel.verses.count - 1 {
+                                    ReviewCardView(hasLeftReview: $hasLeftReview)
+                                        .frame(width: geometry.size.width, height: geometry.size.height)
+                                        .id("review-\(index)")
+                                }
+                                
+                                // Show share card at specific intervals (always shows, more rare)
+                                if shareIntervals.contains(index + 1) && index < viewModel.verses.count - 1 {
+                                    ShareCardView()
+                                        .frame(width: geometry.size.width, height: geometry.size.height)
+                                        .id("share-\(index)")
+                                }
+                                
+                                // Show paywall every 20 verses for non-premium users
+                                if !authService.isPremium && (index + 1) % 20 == 0 && index < viewModel.verses.count - 1 {
+                                    PaywallCardView()
+                                        .frame(width: geometry.size.width, height: geometry.size.height)
+                                        .id("paywall-\(index)")
+                                }
                             }
                         }
                         
@@ -96,9 +127,16 @@ struct MainScrollView: View {
                 }
                 .scrollPosition(id: $scrollPosition)
                 .scrollTargetBehavior(.paging)
-                .onChange(of: scrollPosition) { _, newPosition in
+                .onChange(of: scrollPosition) { oldPosition, newPosition in
                     if let newPosition = newPosition, newPosition < viewModel.verses.count {
                         viewModel.updateCurrentVerse(to: newPosition)
+                        
+                        // Track total verses viewed for grace period (only count forward scrolls)
+                        if oldPosition == nil || (oldPosition != nil && newPosition > oldPosition!) {
+                            if totalVersesViewed < gracePeriodVerses + 10 { // Cap tracking after grace period
+                                totalVersesViewed += 1
+                            }
+                        }
                     }
                 }
                 .onAppear {
@@ -366,6 +404,240 @@ struct PaywallCardView: View {
         case .yearly: return withTrial ? "Save 50%" : "Save 58%"
         }
     }
+}
+
+// MARK: - Review Card View (for main scroll)
+struct ReviewCardView: View {
+    @Environment(\.requestReview) private var requestReview
+    @Binding var hasLeftReview: Bool
+    @State private var animateIn = false
+    @State private var reviewState: ReviewState = .idle
+    
+    enum ReviewState {
+        case idle
+        case loading
+        case completed
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
+            let isVeryCompact = geometry.size.height < 650
+            
+            ZStack {
+                Color.white
+                
+                VStack(spacing: isVeryCompact ? 20 : (isCompact ? 26 : 32)) {
+                    Spacer()
+                    
+                    // Star icon
+                    Image(systemName: "star.fill")
+                        .font(.system(size: isVeryCompact ? 40 : (isCompact ? 48 : 56)))
+                        .foregroundColor(.black)
+                        .opacity(animateIn ? 1 : 0)
+                        .scaleEffect(animateIn ? 1 : 0.8)
+                        .animation(.easeOut(duration: 0.5), value: animateIn)
+                    
+                    // Main text
+                    Text("Enjoying Scroll The Bible?")
+                        .font(.custom("Georgia", size: isVeryCompact ? 22 : (isCompact ? 24 : 26)))
+                        .fontWeight(.regular)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, isVeryCompact ? 20 : (isCompact ? 22 : 24))
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 15)
+                        .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
+                    
+                    // Subtitle
+                    Text("Your review helps others discover God's Word.")
+                        .font(.system(size: isVeryCompact ? 12 : (isCompact ? 13 : 14), weight: .medium))
+                        .foregroundColor(.gray)
+                        .tracking(1)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(isVeryCompact ? 3 : (isCompact ? 3 : 4))
+                        .padding(.horizontal, isVeryCompact ? 30 : (isCompact ? 35 : 40))
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 10)
+                        .animation(.easeOut(duration: 0.4).delay(0.15), value: animateIn)
+                    
+                    // Review button / Loading / Thank you
+                    switch reviewState {
+                    case .idle:
+                        Button(action: {
+                            let impact = UIImpactFeedbackGenerator(style: .light)
+                            impact.impactOccurred()
+                            
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                reviewState = .loading
+                            }
+                            
+                            // Show the App Store review prompt
+                            requestReview()
+                            
+                            // Transition to thank you after a delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    reviewState = .completed
+                                }
+                            }
+                        }) {
+                            Text("Yes, I'll leave a review")
+                                .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, isVeryCompact ? 28 : (isCompact ? 30 : 32))
+                                .padding(.vertical, isVeryCompact ? 14 : (isCompact ? 15 : 16))
+                                .background(
+                                    Capsule()
+                                        .fill(Color.black)
+                                )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 10)
+                        .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                        
+                    case .loading:
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                                .scaleEffect(0.9)
+                            Text("Loading...")
+                                .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.horizontal, isVeryCompact ? 28 : (isCompact ? 30 : 32))
+                        .padding(.vertical, isVeryCompact ? 14 : (isCompact ? 15 : 16))
+                        .background(
+                            Capsule()
+                                .fill(Color.gray.opacity(0.15))
+                        )
+                        .transition(.opacity)
+                        
+                    case .completed:
+                        Text("Thank you.")
+                            .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .medium))
+                            .foregroundColor(.black)
+                            .transition(.opacity)
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                animateIn = true
+            }
+        }
+        .onDisappear {
+            // Only mark review as complete when scrolling away AFTER they clicked yes
+            if reviewState == .completed {
+                hasLeftReview = true
+            }
+            animateIn = false
+        }
+    }
+}
+
+// MARK: - Share Card View (for main scroll)
+struct ShareCardView: View {
+    @State private var animateIn = false
+    @State private var showingShareSheet = false
+    
+    // App Store URL for sharing
+    private let appStoreURL = "https://apps.apple.com/app/scroll-the-bible/id6745408638"
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
+            let isVeryCompact = geometry.size.height < 650
+            
+            ZStack {
+                Color.white
+                
+                VStack(spacing: isVeryCompact ? 20 : (isCompact ? 26 : 32)) {
+                    Spacer()
+                    
+                    // Share icon
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: isVeryCompact ? 36 : (isCompact ? 42 : 48), weight: .medium))
+                        .foregroundColor(.black)
+                        .opacity(animateIn ? 1 : 0)
+                        .scaleEffect(animateIn ? 1 : 0.8)
+                        .animation(.easeOut(duration: 0.5), value: animateIn)
+                    
+                    // Main text
+                    Text("Share with a friend?")
+                        .font(.custom("Georgia", size: isVeryCompact ? 22 : (isCompact ? 24 : 26)))
+                        .fontWeight(.regular)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, isVeryCompact ? 20 : (isCompact ? 22 : 24))
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 15)
+                        .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
+                    
+                    // Subtitle
+                    Text("Help others discover God's Word.")
+                        .font(.system(size: isVeryCompact ? 12 : (isCompact ? 13 : 14), weight: .medium))
+                        .foregroundColor(.gray)
+                        .tracking(1)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(isVeryCompact ? 3 : (isCompact ? 3 : 4))
+                        .padding(.horizontal, isVeryCompact ? 30 : (isCompact ? 35 : 40))
+                        .opacity(animateIn ? 1 : 0)
+                        .offset(y: animateIn ? 0 : 10)
+                        .animation(.easeOut(duration: 0.4).delay(0.15), value: animateIn)
+                    
+                    // Share button
+                    Button(action: {
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                        showingShareSheet = true
+                    }) {
+                        Text("Share the app")
+                            .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, isVeryCompact ? 28 : (isCompact ? 30 : 32))
+                            .padding(.vertical, isVeryCompact ? 14 : (isCompact ? 15 : 16))
+                            .background(
+                                Capsule()
+                                    .fill(Color.black)
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 10)
+                    .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                    
+                    Spacer()
+                }
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                animateIn = true
+            }
+        }
+        .onDisappear {
+            animateIn = false
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            AppShareSheet(items: [URL(string: appStoreURL)!])
+        }
+    }
+}
+
+// MARK: - App Share Sheet (UIKit wrapper)
+struct AppShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Paywall Card Components

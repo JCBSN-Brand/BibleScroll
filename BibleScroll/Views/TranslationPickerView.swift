@@ -39,6 +39,13 @@ struct TranslationPickerView: View {
                                 Text(translation.fullName)
                                     .font(.system(size: 13))
                                     .foregroundColor(.gray)
+                                
+                                // Copyright notice
+                                if let copyright = translation.copyrightNotice {
+                                    Text(copyright)
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.gray.opacity(0.7))
+                                }
                             }
                             
                             Spacer()
@@ -74,8 +81,8 @@ struct TranslationPickerView: View {
 
 enum BibleTranslation: String, CaseIterable {
     case kjv = "kjv-offline"           // Local/Offline
-    case nkjv = "de4e12af7f28f599-01"  // NKJV from API.Bible
-    case nlt = "65eec8e0b60e656b-01"   // NLT from API.Bible
+    case nkjv = "63097d2a0a2f7db3-01"  // NKJV from API.Bible
+    case nlt = "d6e14a625393b4da-01"   // NLT from API.Bible
     
     var shortName: String {
         switch self {
@@ -93,15 +100,39 @@ enum BibleTranslation: String, CaseIterable {
         }
     }
     
+    /// Copyright notice for display (required by API.Bible terms)
+    var copyrightNotice: String? {
+        switch self {
+        case .kjv:
+            return nil  // Public domain
+        case .nkjv:
+            return "NKJV © 1982 Thomas Nelson. All rights reserved."
+        case .nlt:
+            return "NLT © 2015 Tyndale House Foundation. All rights reserved."
+        }
+    }
+    
+    /// Full copyright citation (for settings/about page)
+    var fullCopyrightCitation: String? {
+        switch self {
+        case .kjv:
+            return nil
+        case .nkjv:
+            return "Scripture quotations marked NKJV are taken from the New King James Version®, Copyright © 1982 by Thomas Nelson. Used by permission. All rights reserved."
+        case .nlt:
+            return "Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, Copyright © 1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers. All rights reserved."
+        }
+    }
+    
     var isOffline: Bool {
         return self == .kjv
     }
     
     var apiId: String? {
         switch self {
-        case .kjv: return nil  // No API needed
-        case .nkjv: return "de4e12af7f28f599-01"
-        case .nlt: return "65eec8e0b60e656b-01"
+        case .kjv: return nil  // No API needed - uses offline data
+        case .nkjv: return "63097d2a0a2f7db3-01"
+        case .nlt: return "d6e14a625393b4da-01"
         }
     }
 }

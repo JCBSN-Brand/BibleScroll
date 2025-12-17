@@ -226,6 +226,14 @@ struct ContentView: View {
                 await viewModel.setTranslation(newTranslation)
             }
         }
+        .alert("API Error", isPresented: .init(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        )) {
+            Button("OK") { viewModel.error = nil }
+        } message: {
+            Text(viewModel.error ?? "Unknown error")
+        }
     }
 }
 

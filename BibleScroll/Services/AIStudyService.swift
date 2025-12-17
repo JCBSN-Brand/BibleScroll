@@ -88,7 +88,10 @@ class AIStudyService: ObservableObject {
             return
         }
         
-        let userMessage = "\(verse.reference): \"\(verse.text)\""
+        // Always use KJV text for AI features (public domain, no copyright restrictions)
+        // This ensures compliance with API.Bible terms regarding AI usage of copyrighted content
+        let kjvText = getKJVText(for: verse)
+        let userMessage = "\(verse.reference) (KJV): \"\(kjvText)\""
         
         let requestBody: [String: Any] = [
             "model": "gpt-4o-mini",
@@ -180,6 +183,21 @@ class AIStudyService: ObservableObject {
         response = ""
         error = nil
         isLoading = false
+    }
+    
+    /// Get KJV text for a verse (public domain - safe for AI usage)
+    /// This ensures compliance with API.Bible copyright terms
+    private func getKJVText(for verse: Verse) -> String {
+        // Fetch KJV text from offline data
+        let kjvVerses = KJVBibleData.getVerses(book: verse.book, chapter: verse.chapter)
+        
+        // Find matching verse number
+        if let kjvVerse = kjvVerses.first(where: { $0.verseNumber == verse.verseNumber }) {
+            return kjvVerse.text
+        }
+        
+        // Fallback to the verse text if KJV not found (shouldn't happen)
+        return verse.text
     }
 }
 
