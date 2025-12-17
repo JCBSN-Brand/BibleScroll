@@ -259,14 +259,6 @@ struct PaywallDrawerView: View {
         }
     }
     
-    private func getMonthlyEquivalent(for plan: SubscriptionPlan, withTrial: Bool) -> String {
-        switch (plan, withTrial) {
-        case (.monthly, _): return "/month"
-        case (.yearly, false): return "/month ($1.67/mo)"
-        case (.yearly, true): return "/month ($2.49/mo)"
-        }
-    }
-    
     private func getSavings(for plan: SubscriptionPlan, withTrial: Bool) -> String? {
         switch plan {
         case .monthly: return nil

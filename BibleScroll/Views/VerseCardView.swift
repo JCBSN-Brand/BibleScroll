@@ -147,7 +147,7 @@ private let verseCardCoordinateSpace = "VerseCardSpace"
 struct VerseCardView: View {
     let verse: Verse
     @ObservedObject var favoritesViewModel: FavoritesViewModel
-    @ObservedObject var authService: AuthService
+    @EnvironmentObject var subscriptionService: SubscriptionService
     
     @State private var showingNotes = false
     @State private var showingAIStudy = false
@@ -265,7 +265,8 @@ struct VerseCardView: View {
             }
         }
         .sheet(isPresented: $showingAIStudy) {
-            AIStudyView(verse: verse, isPresented: $showingAIStudy, authService: authService)
+            AIStudyView(verse: verse, isPresented: $showingAIStudy)
+                .environmentObject(subscriptionService)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -326,7 +327,7 @@ struct VerseCardView: View {
 #Preview {
     VerseCardView(
         verse: Verse.sampleVerses[0],
-        favoritesViewModel: FavoritesViewModel(),
-        authService: AuthService()
+        favoritesViewModel: FavoritesViewModel()
     )
+    .environmentObject(SubscriptionService())
 }

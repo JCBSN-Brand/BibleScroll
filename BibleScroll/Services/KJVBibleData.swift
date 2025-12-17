@@ -74,25 +74,6 @@ enum KJVBibleData {
         return verses.sorted { $0.verseNumber < $1.verseNumber }
     }
     
-    /// Get all book names
-    static func getAllBooks() -> [String] {
-        guard let bible = loadBible() else { return [] }
-        return Array(bible.books.keys)
-    }
-    
-    /// Check if a book exists
-    static func hasBook(_ book: String) -> Bool {
-        guard let bible = loadBible() else { return false }
-        return bible.books[book] != nil
-    }
-    
-    /// Get chapter count for a book
-    static func chapterCount(for book: String) -> Int {
-        guard let bible = loadBible(),
-              let bookData = bible.books[book] else { return 0 }
-        return bookData.chapters.count
-    }
-    
     // MARK: - Private
     
     private static func placeholderVerse(book: String, chapter: Int) -> Verse {

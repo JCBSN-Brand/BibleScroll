@@ -200,16 +200,6 @@ class SubscriptionService: ObservableObject {
         }
     }
     
-    // MARK: - Helper Methods
-    
-    func getDisplayPrice(for product: Product) -> String {
-        return product.displayPrice
-    }
-    
-    func hasFreeTrial(for product: Product) -> Bool {
-        // Products with trial in the ID have free trials
-        return product.id.contains("trial")
-    }
 }
 
 // MARK: - Errors

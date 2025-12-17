@@ -68,15 +68,5 @@ struct RedLetterText {
         
         return result
     }
-    
-    /// Creates a SwiftUI Text view with red letter formatting
-    static func textView(_ text: String, fontSize: CGFloat) -> Text {
-        // If no red letter markers, return plain text
-        guard text.contains("[r]") else {
-            return Text(text)
-        }
-        
-        return Text(parse(text, fontSize: fontSize))
-    }
 }
 

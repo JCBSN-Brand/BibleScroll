@@ -355,16 +355,10 @@ struct ChapterHTMLResponse: Codable {
 // MARK: - Errors
 
 enum BibleAPIError: Error, LocalizedError {
-    case invalidURL
-    case invalidResponse
-    case invalidBook(String)
     case httpError(statusCode: Int)
     
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "Invalid URL"
-        case .invalidResponse: return "Invalid response"
-        case .invalidBook(let book): return "Unknown book: \(book)"
         case .httpError(let code): return "HTTP Error: \(code)"
         }
     }

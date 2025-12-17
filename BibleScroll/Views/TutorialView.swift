@@ -310,6 +310,7 @@ struct ReviewRequestCardView: View {
     @AppStorage("hasLeftReview") private var hasLeftReview = false
     @State private var animateIn = false
     @State private var reviewState: ReviewState = .idle
+    @State private var crownScale: CGFloat = 1.0
     
     enum ReviewState {
         case idle
@@ -327,82 +328,110 @@ struct ReviewRequestCardView: View {
                 VStack(spacing: isCompact ? 24 : 32) {
                     Spacer()
                     
-                    // Main text
-                    Text("Enjoying Scroll The Bible?")
-                        .font(.custom("Georgia", size: isCompact ? 22 : 26))
-                        .fontWeight(.regular)
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.black)
-                        .padding(.horizontal, isCompact ? 20 : 24)
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(y: animateIn ? 0 : 15)
-                        .animation(.easeOut(duration: 0.4), value: animateIn)
-                    
-                    // Subtitle
-                    Text("Your review helps others discover God's Word.")
-                        .font(.system(size: isCompact ? 12 : 14, weight: .medium))
-                        .foregroundColor(.gray)
-                        .tracking(1)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(isCompact ? 3 : 4)
-                        .padding(.horizontal, isCompact ? 30 : 40)
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(y: animateIn ? 0 : 10)
-                        .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
-                    
-                    // Review button / Loading / Thank you
-                    if reviewState == .completed {
-                        Text("Thank you!")
-                            .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                    // Icon area - shows star initially, crown during loading, checkmark when complete
+                    ZStack {
+                        // Star icon (idle state)
+                        Image(systemName: "star.fill")
+                            .font(.system(size: isCompact ? 44 : 52))
                             .foregroundColor(.black)
-                            .transition(.opacity)
-                            .opacity(animateIn ? 1 : 0)
-                            .offset(y: animateIn ? 0 : 10)
-                            .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
-                    } else {
+                            .opacity(reviewState == .idle && animateIn ? 1 : 0)
+                            .scaleEffect(reviewState == .idle && animateIn ? 1 : 0.8)
+                        
+                        // Crown loading animation (loading state)
+                        CrownLoadingView(size: isCompact ? 48 : 56, tint: .black)
+                            .opacity(reviewState == .loading ? 1 : 0)
+                            .scaleEffect(reviewState == .loading ? crownScale : 0.6)
+                        
+                        // Checkmark (completed state)
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: isCompact ? 48 : 56))
+                            .foregroundColor(.black)
+                            .opacity(reviewState == .completed ? 1 : 0)
+                            .scaleEffect(reviewState == .completed ? 1 : 0.5)
+                    }
+                    .animation(.spring(response: 0.4, dampingFraction: 0.7), value: reviewState)
+                    .animation(.easeOut(duration: 0.5), value: animateIn)
+                    
+                    // Main text - changes based on state
+                    Group {
+                        switch reviewState {
+                        case .idle:
+                            Text("Enjoying Scroll The Bible?")
+                        case .loading:
+                            Text("Opening App Store...")
+                        case .completed:
+                            Text("Thank you!")
+                        }
+                    }
+                    .font(.custom("Georgia", size: isCompact ? 22 : 26))
+                    .fontWeight(.regular)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.black)
+                    .padding(.horizontal, isCompact ? 20 : 24)
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 15)
+                    .animation(.easeOut(duration: 0.4), value: animateIn)
+                    .animation(.easeInOut(duration: 0.3), value: reviewState)
+                    
+                    // Subtitle - changes based on state
+                    Group {
+                        switch reviewState {
+                        case .idle:
+                            Text("Your review helps others discover God's Word.")
+                        case .loading:
+                            Text("Please leave your rating when prompted.")
+                        case .completed:
+                            Text("Your support means everything to us.")
+                        }
+                    }
+                    .font(.system(size: isCompact ? 12 : 14, weight: .medium))
+                    .foregroundColor(.gray)
+                    .tracking(0.5)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(isCompact ? 3 : 4)
+                    .padding(.horizontal, isCompact ? 30 : 40)
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 10)
+                    .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
+                    .animation(.easeInOut(duration: 0.3), value: reviewState)
+                    
+                    // Button area
+                    switch reviewState {
+                    case .idle:
                         Button(action: {
-                            guard reviewState == .idle else { return }
-                            
-                            let impact = UIImpactFeedbackGenerator(style: .light)
-                            impact.impactOccurred()
-                            
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                reviewState = .loading
-                            }
-                            
-                            // Mark that user has engaged with review - prevents future review prompts
-                            hasLeftReview = true
-                            
-                            // Show the Apple review prompt
-                            requestReview()
-                            
-                            // Transition to thank you after a delay
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    reviewState = .completed
-                                }
-                            }
+                            triggerReviewFlow()
                         }) {
-                            HStack(spacing: 10) {
-                                if reviewState == .loading {
-                                    CrownLoadingView(size: 16, tint: .white)
-                                }
-                                Text(reviewState == .loading ? "Loading..." : "Yes, I'll leave a review")
-                                    .font(.system(size: isCompact ? 14 : 16, weight: .medium))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, isCompact ? 28 : 32)
-                            .padding(.vertical, isCompact ? 14 : 16)
-                            .background(
-                                Capsule()
-                                    .fill(reviewState == .loading ? Color.gray : Color.black)
-                            )
+                            Text("Yes, I'll leave a review")
+                                .font(.system(size: isCompact ? 14 : 16, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, isCompact ? 28 : 32)
+                                .padding(.vertical, isCompact ? 14 : 16)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.black)
+                                )
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .disabled(reviewState == .loading)
                         .opacity(animateIn ? 1 : 0)
                         .offset(y: animateIn ? 0 : 10)
                         .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                        
+                    case .loading:
+                        HStack(spacing: 10) {
+                            CrownLoadingView(size: 18, tint: .white)
+                        }
+                        .padding(.horizontal, isCompact ? 36 : 44)
+                        .padding(.vertical, isCompact ? 14 : 16)
+                        .background(
+                            Capsule()
+                                .fill(Color.black.opacity(0.85))
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        
+                    case .completed:
+                        Color.clear
+                            .frame(height: isCompact ? 46 : 54)
+                            .transition(.opacity)
                     }
                     
                     Spacer()
@@ -420,6 +449,41 @@ struct ReviewRequestCardView: View {
         .onDisappear {
             animateIn = false
             Self.hasAnimated = false
+        }
+    }
+    
+    private func triggerReviewFlow() {
+        // Haptic feedback
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+        
+        // Immediately mark that user has engaged - prevents future review prompts
+        hasLeftReview = true
+        
+        // Transition to loading state
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            reviewState = .loading
+            crownScale = 1.0
+        }
+        
+        // Start crown pulse animation
+        withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+            crownScale = 1.08
+        }
+        
+        // Wait for animation, then trigger Apple's review prompt
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            requestReview()
+            
+            // Transition to completed after giving time for review dialog
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                let success = UINotificationFeedbackGenerator()
+                success.notificationOccurred(.success)
+                
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    reviewState = .completed
+                }
+            }
         }
     }
 }

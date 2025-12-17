@@ -112,18 +112,6 @@ enum BibleTranslation: String, CaseIterable {
         }
     }
     
-    /// Full copyright citation (for settings/about page)
-    var fullCopyrightCitation: String? {
-        switch self {
-        case .kjv:
-            return nil
-        case .nkjv:
-            return "Scripture quotations marked NKJV are taken from the New King James Version®, Copyright © 1982 by Thomas Nelson. Used by permission. All rights reserved."
-        case .nlt:
-            return "Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, Copyright © 1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers. All rights reserved."
-        }
-    }
-    
     var isOffline: Bool {
         return self == .kjv
     }

@@ -30,11 +30,6 @@ class FavoritesViewModel: ObservableObject {
         return favoriteIds.contains(verse.verseId)
     }
     
-    /// Check if a verse ID is favorited
-    func isFavorite(verseId: String) -> Bool {
-        return favoriteIds.contains(verseId)
-    }
-    
     /// Toggle favorite status for a verse
     func toggleFavorite(_ verse: Verse) {
         guard let storage = storageService else { return }

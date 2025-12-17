@@ -56,7 +56,6 @@ struct HeaderCapsuleButton<Content: View>: View {
 
 struct ContentView: View {
     @StateObject private var viewModel = BibleViewModel()
-    @StateObject private var authService = AuthService()
     @State private var showingBookPicker = false
     @State private var showingFavorites = false
     @State private var showingNotes = false
@@ -128,7 +127,7 @@ struct ContentView: View {
     private var mainContent: some View {
         GeometryReader { geometry in
             ZStack {
-                MainScrollView(viewModel: viewModel, authService: authService)
+                MainScrollView(viewModel: viewModel)
                 
                 // Navigation bar - positioned at top with proper safe area
                 VStack(spacing: 0) {

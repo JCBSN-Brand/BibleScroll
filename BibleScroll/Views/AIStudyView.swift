@@ -10,7 +10,7 @@ import SwiftUI
 struct AIStudyView: View {
     let verse: Verse
     @Binding var isPresented: Bool
-    @ObservedObject var authService: AuthService
+    @EnvironmentObject var subscriptionService: SubscriptionService
     
     @StateObject private var aiService = AIStudyService()
     @State private var selectedMode: AIStudyMode?
@@ -112,7 +112,7 @@ struct AIStudyView: View {
     private func optionRow(_ mode: AIStudyMode) -> some View {
         Button(action: {
             // Check if user is premium before allowing access
-            if authService.isPremium {
+            if subscriptionService.isPremium {
                 // Premium user - allow access
                 selectedMode = mode
                 Task {
@@ -286,8 +286,8 @@ struct AIStudyView: View {
 #Preview {
     AIStudyView(
         verse: Verse.sampleVerses[0],
-        isPresented: .constant(true),
-        authService: AuthService()
+        isPresented: .constant(true)
     )
+    .environmentObject(SubscriptionService())
 }
 
