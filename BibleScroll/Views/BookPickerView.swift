@@ -15,6 +15,7 @@ struct BookPickerView: View {
     @State private var selectedChapter: Int = 1
     @State private var showingChapters = false
     @State private var searchText = ""
+    @State private var hasScrolledToCurrentBook = false
     
     var body: some View {
         NavigationStack {
@@ -109,56 +110,74 @@ struct BookPickerView: View {
     // MARK: - Book List View
     
     private var bookListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
-                // Old Testament
-                if !filteredOldTestament.isEmpty {
-                    Section {
-                        ForEach(filteredOldTestament) { book in
-                            bookRow(book)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+                    // Old Testament
+                    if !filteredOldTestament.isEmpty {
+                        Section {
+                            ForEach(filteredOldTestament) { book in
+                                bookRow(book)
+                                    .id(book.name)
+                            }
+                        } header: {
+                            sectionHeader("Old Testament")
                         }
-                    } header: {
-                        sectionHeader("Old Testament")
+                    }
+                    
+                    // New Testament
+                    if !filteredNewTestament.isEmpty {
+                        Section {
+                            ForEach(filteredNewTestament) { book in
+                                bookRow(book)
+                                    .id(book.name)
+                            }
+                        } header: {
+                            sectionHeader("New Testament")
+                        }
+                    }
+                    
+                    // No results
+                    if filteredOldTestament.isEmpty && filteredNewTestament.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray.opacity(0.4))
+                            Text("No books found")
+                                .font(.system(size: 16))
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.top, 60)
                     }
                 }
-                
-                // New Testament
-                if !filteredNewTestament.isEmpty {
-                    Section {
-                        ForEach(filteredNewTestament) { book in
-                            bookRow(book)
-                        }
-                    } header: {
-                        sectionHeader("New Testament")
-                    }
-                }
-                
-                // No results
-                if filteredOldTestament.isEmpty && filteredNewTestament.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 40))
-                            .foregroundColor(.gray.opacity(0.4))
-                        Text("No books found")
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                    }
-                    .padding(.top, 60)
+            }
+            .onAppear {
+                // Instantly position at current book when view appears (no animation)
+                if !hasScrolledToCurrentBook && searchText.isEmpty {
+                    proxy.scrollTo(viewModel.currentBook, anchor: .center)
+                    hasScrolledToCurrentBook = true
                 }
             }
         }
     }
     
     private func bookRow(_ book: Book) -> some View {
-        Button(action: {
+        let isCurrentBook = book.name == viewModel.currentBook
+        
+        return Button(action: {
             selectedBook = book
             withAnimation(.easeInOut(duration: 0.2)) {
                 showingChapters = true
             }
         }) {
-            HStack {
+            HStack(spacing: 12) {
+                // Current book indicator - minimal dot
+                Circle()
+                    .fill(isCurrentBook ? Color.black : Color.clear)
+                    .frame(width: 6, height: 6)
+                
                 Text(book.name)
-                    .font(.system(size: 17))
+                    .font(.system(size: 17, weight: isCurrentBook ? .semibold : .regular))
                     .foregroundColor(.black)
                 
                 Spacer()
@@ -173,7 +192,7 @@ struct BookPickerView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
-            .background(Color.white)
+            .background(isCurrentBook ? Color.black.opacity(0.04) : Color.white)
         }
         .buttonStyle(PlainButtonStyle())
     }

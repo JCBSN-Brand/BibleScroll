@@ -13,6 +13,7 @@ struct SearchView: View {
     
     @State private var searchText = ""
     @State private var selectedBook: Book?
+    @State private var hasScrolledToCurrentBook = false
     @FocusState private var isSearchFocused: Bool
     
     var body: some View {
@@ -57,11 +58,6 @@ struct SearchView: View {
                         .foregroundColor(.black)
                     }
                 }
-            }
-        }
-        .onAppear {
-            DispatchQueue.main.async {
-                isSearchFocused = true
             }
         }
     }
@@ -122,11 +118,17 @@ struct SearchView: View {
                         }) {
                             Text("\(chapter)")
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.black)
+                                .foregroundColor(
+                                    (book.name == viewModel.currentBook && chapter == viewModel.currentChapter)
+                                    ? .white : .black
+                                )
                                 .frame(width: 56, height: 56)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.gray.opacity(0.1))
+                                        .fill(
+                                            (book.name == viewModel.currentBook && chapter == viewModel.currentChapter)
+                                            ? Color.black : Color.gray.opacity(0.1)
+                                        )
                                 )
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -141,22 +143,33 @@ struct SearchView: View {
     // MARK: - All Books View
     
     private var allBooksView: some View {
-        ScrollView {
-            LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
-                Section {
-                    ForEach(Book.oldTestament) { book in
-                        bookRow(book)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+                    Section {
+                        ForEach(Book.oldTestament) { book in
+                            bookRow(book)
+                                .id(book.name)
+                        }
+                    } header: {
+                        sectionHeader("Old Testament")
                     }
-                } header: {
-                    sectionHeader("Old Testament")
+                    
+                    Section {
+                        ForEach(Book.newTestament) { book in
+                            bookRow(book)
+                                .id(book.name)
+                        }
+                    } header: {
+                        sectionHeader("New Testament")
+                    }
                 }
-                
-                Section {
-                    ForEach(Book.newTestament) { book in
-                        bookRow(book)
-                    }
-                } header: {
-                    sectionHeader("New Testament")
+            }
+            .onAppear {
+                // Instantly position at current book when view appears (no animation)
+                if !hasScrolledToCurrentBook {
+                    proxy.scrollTo(viewModel.currentBook, anchor: .center)
+                    hasScrolledToCurrentBook = true
                 }
             }
         }
@@ -169,6 +182,7 @@ struct SearchView: View {
             LazyVStack(spacing: 0) {
                 ForEach(filteredBooks) { book in
                     bookRow(book)
+                        .id(book.name)
                 }
                 
                 if filteredBooks.isEmpty {
@@ -207,15 +221,22 @@ struct SearchView: View {
     // MARK: - UI Components
     
     private func bookRow(_ book: Book) -> some View {
-        Button(action: {
+        let isCurrentBook = book.name == viewModel.currentBook
+        
+        return Button(action: {
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedBook = book
                 isSearchFocused = false
             }
         }) {
-            HStack {
+            HStack(spacing: 12) {
+                // Current book indicator - minimal dot
+                Circle()
+                    .fill(isCurrentBook ? Color.black : Color.clear)
+                    .frame(width: 6, height: 6)
+                
                 Text(book.name)
-                    .font(.system(size: 17))
+                    .font(.system(size: 17, weight: isCurrentBook ? .semibold : .regular))
                     .foregroundColor(.black)
                 
                 Spacer()
@@ -230,7 +251,7 @@ struct SearchView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
-            .background(Color.white)
+            .background(isCurrentBook ? Color.black.opacity(0.04) : Color.white)
         }
         .buttonStyle(PlainButtonStyle())
     }

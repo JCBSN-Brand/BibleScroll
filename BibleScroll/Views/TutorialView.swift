@@ -268,8 +268,11 @@ struct TutorialCardView: View {
             guard !Self.animatedCardIDs.contains(cardKey) else { return }
             Self.animatedCardIDs.insert(cardKey)
             
-            // Slight delay to trigger animation after view appears
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Longer delay for first card to ensure app is fully loaded before animation starts
+            // This prevents the "double animation" issue during initial app launch
+            let delay: Double = cardIndex == 0 ? 0.6 : 0.1
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 animateIn = true
             }
         }
