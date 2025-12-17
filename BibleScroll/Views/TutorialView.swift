@@ -359,9 +359,7 @@ struct ReviewRequestCardView: View {
                         
                     case .loading:
                         HStack(spacing: 10) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .gray))
-                                .scaleEffect(0.9)
+                            CrownLoadingView(size: 16, tint: .gray)
                             Text("Loading...")
                                 .font(.system(size: isCompact ? 14 : 16, weight: .medium))
                                 .foregroundColor(.gray)
@@ -968,9 +966,7 @@ struct PaywallView: View {
                         }) {
                             HStack(spacing: 8) {
                                 if isPurchasing {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .scaleEffect(0.9)
+                                    CrownLoadingView(size: 18, tint: .white)
                                 }
                                 Text(isPurchasing ? "Processing..." : "Continue")
                                     .font(.system(size: isCompact ? 15 : 17, weight: .semibold))

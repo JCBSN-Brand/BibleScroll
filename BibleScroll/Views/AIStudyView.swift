@@ -188,9 +188,7 @@ struct AIStudyView: View {
     
     private var loadingView: some View {
         VStack(spacing: 16) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .black))
-                .scaleEffect(1.1)
+            CrownLoadingView(size: 28, tint: .black)
             
             Text("Studying...")
                 .font(.system(size: 14))

@@ -148,9 +148,7 @@ struct PaywallDrawerView: View {
                         }) {
                             HStack(spacing: 8) {
                                 if isPurchasing {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .scaleEffect(0.9)
+                                    CrownLoadingView(size: 18, tint: .white)
                                 }
                                 Text(isPurchasing ? "Processing..." : "Continue")
                                     .font(.system(size: isCompact ? 15 : 17, weight: .semibold))

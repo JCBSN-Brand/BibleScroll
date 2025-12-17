@@ -37,9 +37,7 @@ struct MainScrollView: View {
                 // Loading state
                 VStack {
                     Spacer()
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .black))
-                        .scaleEffect(1.2)
+                    CrownLoadingView(size: 32, tint: .black)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -297,9 +295,7 @@ struct PaywallCardView: View {
                         }) {
                             HStack(spacing: 8) {
                                 if isPurchasing {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .scaleEffect(0.9)
+                                    CrownLoadingView(size: 18, tint: .white)
                                 }
                                 Text(isPurchasing ? "Processing..." : "Continue")
                                     .font(.system(size: isVeryCompact ? 15 : (isCompact ? 16 : 17), weight: .semibold))
@@ -499,9 +495,7 @@ struct ReviewCardView: View {
                         
                     case .loading:
                         HStack(spacing: 10) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .gray))
-                                .scaleEffect(0.9)
+                            CrownLoadingView(size: 16, tint: .gray)
                             Text("Loading...")
                                 .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .medium))
                                 .foregroundColor(.gray)
@@ -544,9 +538,30 @@ struct ReviewCardView: View {
 struct ShareCardView: View {
     @State private var animateIn = false
     @State private var showingShareSheet = false
+    @State private var buttonPressed = false
+    @State private var showCheckmark = false
+    @State private var iconBounce = false
+    @State private var pulseRing = false
     
     // App Store URL for sharing
     private let appStoreURL = "https://apps.apple.com/app/scroll-the-bible/id6745408638"
+    
+    // Fun, hook-y headlines that rotate randomly
+    private let headlines: [(main: String, sub: String)] = [
+        ("Your friend needs this.", "Trust us. Send it."),
+        ("Be that friend.", "The one who shares the good stuff."),
+        ("Plot twist:", "You're about to make someone's day."),
+        ("Someone you know\nis doom-scrolling rn.", "Send them something better."),
+        ("Hot take:", "This app > everything else in their feed."),
+        ("Real ones share.", "Just saying."),
+        ("POV:", "You just found their new favorite app."),
+        ("One tap.", "Eternal impact. No pressure."),
+        ("Send this to your\ngroup chat.", "Watch what happens."),
+        ("Your move.", "Someone's waiting for this."),
+    ]
+    
+    // Pick a random headline on each appearance
+    @State private var currentHeadline: (main: String, sub: String) = ("", "")
     
     var body: some View {
         GeometryReader { geometry in
@@ -556,33 +571,46 @@ struct ShareCardView: View {
             ZStack {
                 Color.white
                 
-                VStack(spacing: isVeryCompact ? 20 : (isCompact ? 26 : 32)) {
+                VStack(spacing: isVeryCompact ? 18 : (isCompact ? 22 : 28)) {
                     Spacer()
                     
-                    // Share icon
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: isVeryCompact ? 36 : (isCompact ? 42 : 48), weight: .medium))
-                        .foregroundColor(.black)
-                        .opacity(animateIn ? 1 : 0)
-                        .scaleEffect(animateIn ? 1 : 0.8)
-                        .animation(.easeOut(duration: 0.5), value: animateIn)
+                    // Animated share icon with pulse ring
+                    ZStack {
+                        // Pulse ring animation
+                        Circle()
+                            .stroke(Color.black.opacity(0.1), lineWidth: 2)
+                            .frame(width: isVeryCompact ? 70 : (isCompact ? 80 : 90),
+                                   height: isVeryCompact ? 70 : (isCompact ? 80 : 90))
+                            .scaleEffect(pulseRing ? 1.3 : 1)
+                            .opacity(pulseRing ? 0 : 0.6)
+                        
+                        // Share icon with bounce
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: isVeryCompact ? 34 : (isCompact ? 40 : 46), weight: .medium))
+                            .foregroundColor(.black)
+                            .offset(y: iconBounce ? -3 : 0)
+                    }
+                    .opacity(animateIn ? 1 : 0)
+                    .scaleEffect(animateIn ? 1 : 0.7)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: animateIn)
                     
-                    // Main text
-                    Text("Share with a friend?")
+                    // Main hook text
+                    Text(currentHeadline.main)
                         .font(.custom("Georgia", size: isVeryCompact ? 22 : (isCompact ? 24 : 26)))
                         .fontWeight(.regular)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.black)
-                        .padding(.horizontal, isVeryCompact ? 20 : (isCompact ? 22 : 24))
+                        .lineSpacing(4)
+                        .padding(.horizontal, isVeryCompact ? 24 : (isCompact ? 28 : 32))
                         .opacity(animateIn ? 1 : 0)
                         .offset(y: animateIn ? 0 : 15)
                         .animation(.easeOut(duration: 0.4).delay(0.1), value: animateIn)
                     
                     // Subtitle
-                    Text("Help others discover God's Word.")
+                    Text(currentHeadline.sub)
                         .font(.system(size: isVeryCompact ? 12 : (isCompact ? 13 : 14), weight: .medium))
                         .foregroundColor(.gray)
-                        .tracking(1)
+                        .tracking(0.5)
                         .multilineTextAlignment(.center)
                         .lineSpacing(isVeryCompact ? 3 : (isCompact ? 3 : 4))
                         .padding(.horizontal, isVeryCompact ? 30 : (isCompact ? 35 : 40))
@@ -590,41 +618,116 @@ struct ShareCardView: View {
                         .offset(y: animateIn ? 0 : 10)
                         .animation(.easeOut(duration: 0.4).delay(0.15), value: animateIn)
                     
-                    // Share button
+                    // Animated Share button
                     Button(action: {
-                        let impact = UIImpactFeedbackGenerator(style: .light)
-                        impact.impactOccurred()
-                        showingShareSheet = true
+                        triggerShareAnimation()
                     }) {
-                        Text("Share the app")
-                            .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, isVeryCompact ? 28 : (isCompact ? 30 : 32))
-                            .padding(.vertical, isVeryCompact ? 14 : (isCompact ? 15 : 16))
-                            .background(
-                                Capsule()
-                                    .fill(Color.black)
-                            )
+                        ZStack {
+                            // Background capsule with scale animation
+                            Capsule()
+                                .fill(showCheckmark ? Color.black.opacity(0.9) : Color.black)
+                                .scaleEffect(buttonPressed ? 0.92 : 1)
+                            
+                            // Content
+                            HStack(spacing: 8) {
+                                if showCheckmark {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .transition(.scale.combined(with: .opacity))
+                                } else {
+                                    Text("Send it")
+                                        .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .medium))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                        }
+                        .frame(width: isVeryCompact ? 130 : (isCompact ? 140 : 150),
+                               height: isVeryCompact ? 46 : (isCompact ? 50 : 54))
                     }
                     .buttonStyle(PlainButtonStyle())
                     .opacity(animateIn ? 1 : 0)
                     .offset(y: animateIn ? 0 : 10)
                     .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: buttonPressed)
+                    .animation(.easeInOut(duration: 0.2), value: showCheckmark)
                     
                     Spacer()
                 }
             }
         }
         .onAppear {
+            // Pick a random headline
+            currentHeadline = headlines.randomElement() ?? headlines[0]
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 animateIn = true
             }
+            
+            // Start subtle icon bounce loop
+            startIconBounce()
+            
+            // Start pulse ring animation
+            startPulseAnimation()
         }
         .onDisappear {
             animateIn = false
+            iconBounce = false
+            pulseRing = false
+            showCheckmark = false
+            buttonPressed = false
         }
         .sheet(isPresented: $showingShareSheet) {
             AppShareSheet(items: [URL(string: appStoreURL)!])
+        }
+    }
+    
+    private func triggerShareAnimation() {
+        // Haptic feedback
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+        
+        // Button press animation
+        withAnimation(.easeInOut(duration: 0.1)) {
+            buttonPressed = true
+        }
+        
+        // Release and show checkmark
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                buttonPressed = false
+                showCheckmark = true
+            }
+            
+            // Success haptic
+            let success = UINotificationFeedbackGenerator()
+            success.notificationOccurred(.success)
+        }
+        
+        // Show share sheet after animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            showingShareSheet = true
+            
+            // Reset checkmark after sheet appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                withAnimation {
+                    showCheckmark = false
+                }
+            }
+        }
+    }
+    
+    private func startIconBounce() {
+        // Subtle floating animation for the icon
+        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+            iconBounce = true
+        }
+    }
+    
+    private func startPulseAnimation() {
+        // Pulse ring animation that repeats
+        withAnimation(.easeOut(duration: 1.8).repeatForever(autoreverses: false)) {
+            pulseRing = true
         }
     }
 }

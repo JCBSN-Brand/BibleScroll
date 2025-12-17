@@ -52,9 +52,10 @@ class BibleViewModel: ObservableObject {
         // Load saved reading position or default to Genesis 1
         loadSavedPosition()
         
-        // Load initial chapter
+        // Load initial chapter, preserving the saved verse position
+        let savedVerseIndex = currentVerseIndex
         Task {
-            await loadChapter(book: currentBook, chapter: currentChapter)
+            await loadChapter(book: currentBook, chapter: currentChapter, startAtVerse: savedVerseIndex)
         }
     }
     
@@ -93,7 +94,11 @@ class BibleViewModel: ObservableObject {
     // MARK: - Public Methods
     
     /// Load verses for a specific book and chapter
-    func loadChapter(book: String, chapter: Int) async {
+    /// - Parameters:
+    ///   - book: The book name to load
+    ///   - chapter: The chapter number to load
+    ///   - startAtVerse: Optional verse index to start at (defaults to 0 for first verse)
+    func loadChapter(book: String, chapter: Int, startAtVerse: Int? = nil) async {
         isLoading = true
         error = nil
         
@@ -103,7 +108,14 @@ class BibleViewModel: ObservableObject {
             self.verses = fetchedVerses
             self.currentBook = book
             self.currentChapter = chapter
-            self.currentVerseIndex = 0
+            
+            // Use the provided verse index if valid, otherwise default to 0
+            if let startVerse = startAtVerse, startVerse >= 0 && startVerse < fetchedVerses.count {
+                self.currentVerseIndex = startVerse
+            } else {
+                self.currentVerseIndex = 0
+            }
+            
             self.isLoading = false
             
             // Save reading position
@@ -117,7 +129,9 @@ class BibleViewModel: ObservableObject {
     /// Change translation and reload current chapter
     func setTranslation(_ translation: BibleTranslation) async {
         currentTranslation = translation
-        await loadChapter(book: currentBook, chapter: currentChapter)
+        // Preserve current verse position when changing translation
+        let currentVerse = currentVerseIndex
+        await loadChapter(book: currentBook, chapter: currentChapter, startAtVerse: currentVerse)
     }
     
     /// Navigate to next chapter

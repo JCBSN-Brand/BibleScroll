@@ -24,6 +24,17 @@ class BibleAPIService: BibleAPIServiceProtocol {
     private let session: URLSession
     private let decoder: JSONDecoder
     
+    // MARK: - Cache
+    
+    /// In-memory cache for API-fetched chapters to reduce API calls
+    /// Key format: "translation-book-chapter" (e.g., "NLT-Matthew-5")
+    private static var verseCache: [String: [Verse]] = [:]
+    
+    /// Generate cache key for a chapter
+    private func cacheKey(translation: BibleTranslation, book: String, chapter: Int) -> String {
+        return "\(translation.shortName)-\(book)-\(chapter)"
+    }
+    
     // MARK: - Book ID Mapping
     
     private let bookIdMap: [String: String] = [
@@ -55,12 +66,19 @@ class BibleAPIService: BibleAPIServiceProtocol {
     
     // MARK: - API Methods
     
-    /// Fetch verses - uses offline data for KJV, API for others
+    /// Fetch verses - uses offline data for KJV, cache or API for others
     func fetchVerses(book: String, chapter: Int, translation: BibleTranslation = .kjv) async throws -> [Verse] {
-        // KJV is always offline - instant loading
+        // KJV is always offline - instant loading, no API cost
         if translation == .kjv {
             print("📖 Loading KJV \(book) \(chapter) (offline)")
             return KJVBibleData.getVerses(book: book, chapter: chapter)
+        }
+        
+        // Check cache first for non-KJV translations
+        let key = cacheKey(translation: translation, book: book, chapter: chapter)
+        if let cachedVerses = BibleAPIService.verseCache[key] {
+            print("📖 Loading \(translation.shortName) \(book) \(chapter) (cached - no API call)")
+            return cachedVerses
         }
         
         // Other translations use API
@@ -68,7 +86,15 @@ class BibleAPIService: BibleAPIServiceProtocol {
             return KJVBibleData.getVerses(book: book, chapter: chapter)
         }
         
-        return try await fetchFromAPI(book: book, chapter: chapter, bibleId: bibleId, translation: translation)
+        let verses = try await fetchFromAPI(book: book, chapter: chapter, bibleId: bibleId, translation: translation)
+        
+        // Cache the result if we got valid verses
+        if !verses.isEmpty {
+            BibleAPIService.verseCache[key] = verses
+            print("💾 Cached \(translation.shortName) \(book) \(chapter) (\(verses.count) verses)")
+        }
+        
+        return verses
     }
     
     /// Fetch from API.Bible - uses chapter endpoint with text format
