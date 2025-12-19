@@ -60,6 +60,10 @@ struct FavoritesView: View {
                 .padding(.horizontal, 40)
             
             Spacer()
+            
+            // Ultra-subtle legal links at bottom
+            legalLinksFooter
+                .padding(.bottom, 20)
         }
     }
     
@@ -71,9 +75,27 @@ struct FavoritesView: View {
                 ForEach(favorites) { favorite in
                     favoriteCard(favorite)
                 }
+                
+                // Ultra-subtle legal links at bottom
+                legalLinksFooter
             }
             .padding(20)
         }
+    }
+    
+    // MARK: - Legal Links Footer
+    
+    private var legalLinksFooter: some View {
+        HStack(spacing: 6) {
+            Link("Privacy", destination: URL(string: APIConfig.privacyPolicyURL)!)
+            Text("·")
+            Link("Terms", destination: URL(string: APIConfig.termsOfUseURL)!)
+        }
+        .font(.system(size: 10, weight: .regular))
+        .tint(.gray.opacity(0.4))
+        .foregroundStyle(.gray.opacity(0.4))
+        .padding(.top, 30)
+        .padding(.bottom, 10)
     }
     
     private func favoriteCard(_ favorite: Favorite) -> some View {

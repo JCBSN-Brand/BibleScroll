@@ -194,6 +194,8 @@ struct TutorialView: View {
 struct TutorialCardView: View {
     // Static tracking to survive view recreation during app lifecycle
     private static var animatedCardIDs: Set<String> = []
+    // Track cards that have COMPLETED their animation (not just started)
+    private static var completedAnimationCardIDs: Set<String> = []
     
     let card: TutorialCard
     let cardIndex: Int
@@ -264,28 +266,39 @@ struct TutorialCardView: View {
             }
         }
         .onAppear {
-            // Use static tracking to prevent double-animation across view recreations
+            // For the first card: if animation already completed, show immediately (no re-animation)
+            if cardIndex == 0 && Self.completedAnimationCardIDs.contains(cardKey) {
+                animateIn = true
+                return
+            }
+            
+            // Check if animation is already in progress (prevents double-scheduling)
             guard !Self.animatedCardIDs.contains(cardKey) else { return }
             Self.animatedCardIDs.insert(cardKey)
             
             // Longer delay for first card to ensure app is fully loaded before animation starts
-            // This prevents the "double animation" issue during initial app launch
             let delay: Double = cardIndex == 0 ? 0.6 : 0.1
             
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 animateIn = true
+                // Mark first card as having completed its animation
+                if cardIndex == 0 {
+                    Self.completedAnimationCardIDs.insert(cardKey)
+                }
             }
         }
         .onDisappear {
             animateIn = false
-            // Remove from tracking so animation plays again when scrolling back
+            // Remove from in-progress tracking
             Self.animatedCardIDs.remove(cardKey)
+            // Note: completedAnimationCardIDs is NOT cleared - first card stays "completed"
         }
     }
     
     // Static method to reset animation tracking (call when tutorial completes)
     static func resetAnimationTracking() {
         animatedCardIDs.removeAll()
+        completedAnimationCardIDs.removeAll()
     }
     
     private func dynamicFontSize(for text: String, isCompact: Bool) -> CGFloat {
@@ -504,7 +517,7 @@ struct ShareRequestCardView: View {
     }
     
     // App Store URL for sharing
-    private let appStoreURL = "https://apps.apple.com/app/scroll-the-bible/id6756558351"
+    private let appStoreURL = "https://apps.apple.com/us/app/scroll-the-bible/id6756558351"
     
     var body: some View {
         GeometryReader { geometry in
@@ -1004,18 +1017,18 @@ struct PaywallView: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 0) {
                         Spacer()
-                            .frame(height: isCompact ? 30 : 60)
+                            .frame(height: isCompact ? 30 : 50)
                         
                         // Crown icon
                         Image("crown-icon")
                             .renderingMode(.template)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: isCompact ? 50 : 70, height: isCompact ? 50 : 70)
+                            .frame(width: isCompact ? 50 : 65, height: isCompact ? 50 : 65)
                             .foregroundColor(.black)
                         
                         Spacer()
-                            .frame(height: isCompact ? 16 : 28)
+                            .frame(height: isCompact ? 16 : 24)
                         
                         // Title
                         Text("Unlock Scroll The Bible")
@@ -1024,7 +1037,7 @@ struct PaywallView: View {
                             .foregroundColor(.black)
                         
                         Spacer()
-                            .frame(height: isCompact ? 8 : 12)
+                            .frame(height: isCompact ? 8 : 10)
                         
                         // Subtitle
                         Text("Deeper study. Unlimited access.")
@@ -1033,10 +1046,10 @@ struct PaywallView: View {
                             .tracking(0.5)
                         
                         Spacer()
-                            .frame(height: isCompact ? 24 : 40)
+                            .frame(height: isCompact ? 24 : 32)
                         
                         // Features list
-                        VStack(spacing: isCompact ? 12 : 16) {
+                        VStack(spacing: isCompact ? 12 : 14) {
                             FeatureRow(text: "AI-powered Bible study", isCompact: isCompact)
                             FeatureRow(text: "Explain It Easier button", isCompact: isCompact)
                             FeatureRow(text: "Cross-references & context", isCompact: isCompact)
@@ -1044,14 +1057,14 @@ struct PaywallView: View {
                         }
                         
                         Spacer()
-                            .frame(height: isCompact ? 20 : 32)
+                            .frame(height: isCompact ? 20 : 28)
                         
                         // Free trial toggle
                         FreeTrialToggle(withFreeTrial: $withFreeTrial, isCompact: isCompact)
                             .padding(.horizontal, horizontalPadding)
                         
                         Spacer()
-                            .frame(height: isCompact ? 14 : 20)
+                            .frame(height: isCompact ? 14 : 18)
                         
                         // Subscription options
                         VStack(spacing: isCompact ? 10 : 12) {
@@ -1092,7 +1105,7 @@ struct PaywallView: View {
                         .padding(.horizontal, horizontalPadding)
                         
                         Spacer()
-                            .frame(height: isCompact ? 12 : 16)
+                            .frame(height: isCompact ? 12 : 14)
                         
                         // Subscribe button
                         Button(action: {
@@ -1120,7 +1133,7 @@ struct PaywallView: View {
                         .disabled(isPurchasing)
                         
                         Spacer()
-                            .frame(height: isCompact ? 10 : 16)
+                            .frame(height: isCompact ? 10 : 12)
                         
                         // Restore purchases
                         Button(action: {
@@ -1138,23 +1151,22 @@ struct PaywallView: View {
                         .buttonStyle(PlainButtonStyle())
                         
                         Spacer()
-                            .frame(height: isCompact ? 16 : 30)
+                            .frame(height: isCompact ? 6 : 8)
                         
-                        // Terms
+                        // Terms and Privacy Links (Required by App Store)
                         HStack(spacing: 4) {
-                            Text("Terms")
-                                .underline()
+                            Link("Terms", destination: URL(string: APIConfig.termsOfUseURL)!)
                             Text("·")
-                            Text("Privacy")
-                                .underline()
+                            Link("Privacy", destination: URL(string: APIConfig.privacyPolicyURL)!)
                         }
-                        .font(.system(size: isCompact ? 10 : 11, weight: .regular))
-                        .foregroundColor(.gray.opacity(0.7))
-                        .padding(.bottom, isCompact ? 20 : 30)
+                        .font(.system(size: isCompact ? 9 : 10, weight: .regular))
+                        .tint(.gray.opacity(0.5))
+                        .foregroundStyle(.gray.opacity(0.5))
+                        .padding(.bottom, isCompact ? 16 : 20)
                     }
                     .frame(minHeight: geometry.size.height)
                 }
-                .scrollDisabled(geometry.size.height >= 700)
+                .scrollDisabled(geometry.size.height >= 750)
             }
         }
     }
@@ -1308,7 +1320,7 @@ struct SubscriptionOptionView: View {
                     }
                 }
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 6) {
                         Text(plan == .yearly ? "Annual" : "Monthly")
                             .font(.system(size: isCompact ? 14 : 16, weight: .medium))
@@ -1327,6 +1339,10 @@ struct SubscriptionOptionView: View {
                         }
                     }
                     
+                    // Billing frequency for App Store compliance
+                    Text(plan == .yearly ? "Billed annually" : "Billed monthly")
+                        .font(.system(size: isCompact ? 9 : 10, weight: .regular))
+                        .foregroundColor(.gray.opacity(0.6))
                 }
                 
                 Spacer()

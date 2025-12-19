@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import StoreKit
 
 // MARK: - Reusable Header Button Styles
 struct HeaderCircleButton<Content: View>: View {
@@ -55,6 +56,7 @@ struct HeaderCapsuleButton<Content: View>: View {
 }
 
 struct ContentView: View {
+    @Environment(\.requestReview) private var requestReview
     @StateObject private var viewModel = BibleViewModel()
     @State private var showingBookPicker = false
     @State private var showingFavorites = false
@@ -76,6 +78,9 @@ struct ContentView: View {
     @State private var showMainContent = false
     @State private var comingFromTutorial = false
     
+    // Track app opens for review prompt timing
+    @AppStorage("appOpenCount") private var appOpenCount = 0
+    
     var body: some View {
         ZStack {
             // White background always visible
@@ -93,12 +98,25 @@ struct ContentView: View {
         }
         .preferredColorScheme(.light)
         .onAppear {
+            // Track app opens
+            appOpenCount += 1
+            
             // Show tutorial on first launch
             if !hasCompletedTutorial {
                 showingTutorial = true
             } else {
                 // If tutorial already completed, show content immediately
                 showMainContent = true
+                
+                // Request review on 2nd+ app open
+                // Apple automatically rate-limits how often the prompt actually appears (~3x per year)
+                // We call it every time and let Apple decide whether to show it
+                if appOpenCount >= 2 {
+                    // Small delay to let the app settle before showing review prompt
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        requestReview()
+                    }
+                }
             }
         }
         .onChange(of: showingTutorial) { oldValue, isShowing in

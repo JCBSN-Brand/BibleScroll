@@ -8,7 +8,7 @@
 import SwiftUI
 
 // App Store link for sharing
-private let appStoreLink = "https://apps.apple.com/app/scroll-the-bible/id6756558351"
+private let appStoreLink = "https://apps.apple.com/us/app/scroll-the-bible/id6756558351"
 
 // Fun, catchy hooks that rotate randomly when sharing
 private let shareHooks: [String] = [

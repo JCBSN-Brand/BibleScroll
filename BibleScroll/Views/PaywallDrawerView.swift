@@ -189,18 +189,19 @@ struct PaywallDrawerView: View {
                         .animation(.easeOut(duration: 0.4).delay(0.35), value: animateIn)
                         
                         Spacer()
-                            .frame(height: isCompact ? 16 : 30)
+                            .frame(height: isCompact ? 6 : 10)
                         
-                        // Terms
+                        // Terms and Privacy Links (Required by App Store)
                         HStack(spacing: 4) {
-                            Text("Terms")
-                                .underline()
+                            Link("Terms", destination: URL(string: APIConfig.termsOfUseURL)!)
                             Text("·")
-                            Text("Privacy")
-                                .underline()
+                            Link("Privacy", destination: URL(string: APIConfig.privacyPolicyURL)!)
                         }
-                        .font(.system(size: isCompact ? 10 : 11, weight: .regular))
-                        .foregroundColor(.gray.opacity(0.7))
+                        .font(.system(size: isCompact ? 9 : 10, weight: .regular))
+                        .tint(.gray.opacity(0.5))
+                        .foregroundStyle(.gray.opacity(0.5))
+                        .opacity(animateIn ? 1 : 0)
+                        .animation(.easeOut(duration: 0.4).delay(0.4), value: animateIn)
                         .padding(.bottom, isCompact ? 20 : 30)
                         .opacity(animateIn ? 1 : 0)
                         .animation(.easeOut(duration: 0.4).delay(0.4), value: animateIn)
@@ -365,7 +366,7 @@ struct PaywallSubscriptionOptionView: View {
                     }
                 }
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 6) {
                         Text(plan == .yearly ? "Annual" : "Monthly")
                             .font(.system(size: isCompact ? 14 : 16, weight: .medium))
@@ -384,6 +385,10 @@ struct PaywallSubscriptionOptionView: View {
                         }
                     }
                     
+                    // Billing frequency for App Store compliance
+                    Text(plan == .yearly ? "Billed annually" : "Billed monthly")
+                        .font(.system(size: isCompact ? 9 : 10, weight: .regular))
+                        .foregroundColor(.gray.opacity(0.6))
                 }
                 
                 Spacer()

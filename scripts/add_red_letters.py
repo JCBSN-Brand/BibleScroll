@@ -524,3 +524,6 @@ if __name__ == "__main__":
     else:
         process_bible_file(sys.argv[1])
 
+
+
+
