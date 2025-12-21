@@ -19,61 +19,89 @@ struct AnimatedHeart: Identifiable {
 struct CrownButton: View {
     let action: () -> Void
     @Binding var heartImpactScale: CGFloat  // External control for heart slam impact
+    var showHint: Bool = false  // Shows pulsing hint after dwelling on verse
     
     @State private var scale: CGFloat = 1.0
     @State private var isTouching = false
+    @State private var pulseScale: CGFloat = 1.0
     
     var body: some View {
-        Image("crown-icon")
-            .renderingMode(.template)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 90, height: 90)
-            .foregroundColor(.black)
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-            )
-            .scaleEffect(scale * heartImpactScale)  // Combine both scales
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        // Only shrink on first touch (prevent multiple shrinks during drag)
-                        if !isTouching {
-                            isTouching = true
-                            
-                            // Haptic on touch down
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                            impactFeedback.impactOccurred()
-                            
-                            // Shrink down (less dramatic)
-                            withAnimation(.easeInOut(duration: 0.08)) {
-                                scale = 0.85
+        VStack(spacing: 8) {
+            Image("crown-icon")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 82, height: 82)
+                .foregroundColor(.black)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                )
+                .scaleEffect(scale * heartImpactScale * pulseScale)  // Combine all scales
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in
+                            // Only shrink on first touch (prevent multiple shrinks during drag)
+                            if !isTouching {
+                                isTouching = true
+                                
+                                // Haptic on touch down
+                                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                impactFeedback.impactOccurred()
+                                
+                                // Shrink down (less dramatic)
+                                withAnimation(.easeInOut(duration: 0.08)) {
+                                    scale = 0.85
+                                }
                             }
                         }
-                    }
-                    .onEnded { _ in
-                        isTouching = false
-                        
-                        // Ensure shrink completes THEN bounce back
-                        // Wait for shrink to finish (0.08s) before bouncing
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                            // Haptic on release
-                            let releaseFeedback = UIImpactFeedbackGenerator(style: .light)
-                            releaseFeedback.impactOccurred()
+                        .onEnded { _ in
+                            isTouching = false
                             
-                            // Bounce back up with spring (snappier)
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
-                                scale = 1.0
+                            // Ensure shrink completes THEN bounce back
+                            // Wait for shrink to finish (0.08s) before bouncing
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                                // Haptic on release
+                                let releaseFeedback = UIImpactFeedbackGenerator(style: .light)
+                                releaseFeedback.impactOccurred()
+                                
+                                // Bounce back up with spring (snappier)
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+                                    scale = 1.0
+                                }
+                                
+                                // Execute action
+                                action()
                             }
-                            
-                            // Execute action
-                            action()
                         }
-                    }
-            )
+                )
+            
+            // "Click me" hint text
+            if showHint {
+                Text("Click me")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.gray.opacity(0.7))
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
+        }
+        .onChange(of: showHint) { _, isShowing in
+            if isShowing {
+                startPulseAnimation()
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    pulseScale = 1.0
+                }
+            }
+        }
+    }
+    
+    private func startPulseAnimation() {
+        // Gentle pulse animation
+        withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+            pulseScale = 1.06
+        }
     }
 }
 
@@ -155,6 +183,13 @@ struct VerseCardView: View {
     @State private var animatedHearts: [AnimatedHeart] = []
     @State private var crownPosition: CGPoint = .zero  // Track where crown is
     @State private var crownImpactScale: CGFloat = 1.0  // For slam dunk bounce
+    @State private var showCrownHint = false  // Shows "Click me" after 3s dwell
+    @State private var dwellTimer: Timer? = nil
+    
+    // Hide crown button for Esther 8:9 (longest verse in the Bible - needs full screen space)
+    private var shouldHideCrown: Bool {
+        verse.book == "Esther" && verse.chapter == 8 && verse.verseNumber == 9
+    }
     
     var body: some View {
         ZStack {
@@ -207,26 +242,35 @@ struct VerseCardView: View {
             )
             
             // Crown button - centered below header (AI Study)
-            VStack {
-                CrownButton(
-                    action: {
-                        showingAIStudy = true
-                    },
-                    heartImpactScale: $crownImpactScale
-                )
-                .background(
-                    GeometryReader { geo in
-                        Color.clear
-                            .onAppear {
-                                // Get the center of the crown button in the coordinate space
-                                let frame = geo.frame(in: .named(verseCardCoordinateSpace))
-                                crownPosition = CGPoint(x: frame.midX, y: frame.midY)
-                            }
-                    }
-                )
-                .padding(.top, 160)
-                
-                Spacer()
+            // Hidden for Esther 8:9 (longest verse) to give full screen space
+            if !shouldHideCrown {
+                VStack {
+                    CrownButton(
+                        action: {
+                            // Hide hint when tapped
+                            showCrownHint = false
+                            dwellTimer?.invalidate()
+                            dwellTimer = nil
+                            showingAIStudy = true
+                        },
+                        heartImpactScale: $crownImpactScale,
+                        showHint: showCrownHint
+                    )
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear {
+                                    // Get the center of the crown button in the coordinate space
+                                    let frame = geo.frame(in: .named(verseCardCoordinateSpace))
+                                    crownPosition = CGPoint(x: frame.midX, y: frame.midY)
+                                }
+                        }
+                    )
+                .padding(.top, 145)
+                .animation(.easeOut(duration: 0.3), value: showCrownHint)
+                    
+                    Spacer()
+                }
             }
             
             // Action buttons OUTSIDE of double-tap gesture area - instant response
@@ -269,6 +313,26 @@ struct VerseCardView: View {
                 .environmentObject(subscriptionService)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .onAppear {
+            startDwellTimer()
+        }
+        .onDisappear {
+            dwellTimer?.invalidate()
+            dwellTimer = nil
+            showCrownHint = false
+        }
+    }
+    
+    // Start a timer to show "Click me" hint after 3 seconds
+    private func startDwellTimer() {
+        dwellTimer?.invalidate()
+        showCrownHint = false
+        
+        dwellTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
+            withAnimation(.easeOut(duration: 0.3)) {
+                showCrownHint = true
+            }
         }
     }
     
