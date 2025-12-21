@@ -127,13 +127,25 @@ struct TutorialView: View {
                     VStack(spacing: 0) {
                         ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                             if card.isPaywall {
-                                PaywallView(
-                                    onComplete: completeTutorial,
-                                    selectedPlan: $paywallSelectedPlan,
-                                    withFreeTrial: $paywallWithFreeTrial,
-                                    isPurchasing: $paywallIsPurchasing
-                                )
-                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                // iOS 18 and below: use minHeight to prevent clipping
+                                // iOS 26+: use fixed height (works perfectly)
+                                if #available(iOS 26, *) {
+                                    PaywallView(
+                                        onComplete: completeTutorial,
+                                        selectedPlan: $paywallSelectedPlan,
+                                        withFreeTrial: $paywallWithFreeTrial,
+                                        isPurchasing: $paywallIsPurchasing
+                                    )
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                                } else {
+                                    PaywallView(
+                                        onComplete: completeTutorial,
+                                        selectedPlan: $paywallSelectedPlan,
+                                        withFreeTrial: $paywallWithFreeTrial,
+                                        isPurchasing: $paywallIsPurchasing
+                                    )
+                                    .frame(minWidth: geometry.size.width, maxWidth: geometry.size.width, minHeight: geometry.size.height)
+                                }
                             } else if card.isReviewRequest {
                                 ReviewRequestCardView()
                                     .frame(width: geometry.size.width, height: geometry.size.height)
@@ -1007,167 +1019,187 @@ struct PaywallView: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
-            let horizontalPadding: CGFloat = min(32, geometry.size.width * 0.08)
-            
-            ZStack {
-                Color.white
+        // iOS 26+: Use GeometryReader with ScrollView (works perfectly)
+        // iOS 18 and below: Use simpler structure without nested GeometryReader
+        if #available(iOS 26, *) {
+            GeometryReader { geometry in
+                let isCompact = geometry.size.height < 700
+                let isVeryCompact = geometry.size.height < 650
+                let horizontalPadding: CGFloat = min(32, geometry.size.width * 0.08)
                 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        Spacer()
-                            .frame(height: isCompact ? 30 : 50)
-                        
-                        // Crown icon
-                        Image("crown-icon")
-                            .renderingMode(.template)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: isCompact ? 50 : 65, height: isCompact ? 50 : 65)
-                            .foregroundColor(.black)
-                        
-                        Spacer()
-                            .frame(height: isCompact ? 16 : 24)
-                        
-                        // Title
-                        Text("Unlock Scroll The Bible")
-                            .font(.custom("Georgia", size: isCompact ? 24 : 28))
-                            .fontWeight(.regular)
-                            .foregroundColor(.black)
-                        
-                        Spacer()
-                            .frame(height: isCompact ? 8 : 10)
-                        
-                        // Subtitle
-                        Text("Deeper study. Unlimited access.")
-                            .font(.system(size: isCompact ? 13 : 15, weight: .medium))
-                            .foregroundColor(.gray)
-                            .tracking(0.5)
-                        
-                        Spacer()
-                            .frame(height: isCompact ? 24 : 32)
-                        
-                        // Features list
-                        VStack(spacing: isCompact ? 12 : 14) {
-                            FeatureRow(text: "AI-powered Bible study", isCompact: isCompact)
-                            FeatureRow(text: "Explain It Easier button", isCompact: isCompact)
-                            FeatureRow(text: "Cross-references & context", isCompact: isCompact)
-                            FeatureRow(text: "Ad-free experience", isCompact: isCompact)
-                        }
-                        
-                        Spacer()
-                            .frame(height: isCompact ? 20 : 28)
-                        
-                        // Free trial toggle
-                        FreeTrialToggle(withFreeTrial: $withFreeTrial, isCompact: isCompact)
-                            .padding(.horizontal, horizontalPadding)
-                        
-                        Spacer()
-                            .frame(height: isCompact ? 14 : 18)
-                        
-                        // Subscription options
-                        VStack(spacing: isCompact ? 10 : 12) {
-                            // Yearly plan
-                            SubscriptionOptionView(
-                                plan: .yearly,
-                                isSelected: selectedPlan == .yearly,
-                                withFreeTrial: withFreeTrial,
-                                isCompact: isCompact,
-                                onSelect: { selectedPlan = .yearly },
-                                getPrice: getPrice,
-                                getSavings: getSavings
-                            )
-                            
-                            // Monthly plan
-                            SubscriptionOptionView(
-                                plan: .monthly,
-                                isSelected: selectedPlan == .monthly,
-                                withFreeTrial: withFreeTrial,
-                                isCompact: isCompact,
-                                onSelect: { selectedPlan = .monthly },
-                                getPrice: getPrice,
-                                getSavings: getSavings
-                            )
-                            
-                            // No commitment text
-                            HStack(spacing: 6) {
-                                Image(systemName: "checkmark.shield.fill")
-                                    .font(.system(size: isCompact ? 10 : 12, weight: .medium))
-                                    .foregroundColor(.gray)
-                                
-                                Text("No commitment · Cancel anytime")
-                                    .font(.system(size: isCompact ? 10 : 12, weight: .regular))
-                                    .foregroundColor(.gray)
-                            }
-                            .padding(.top, isCompact ? 2 : 4)
-                        }
-                        .padding(.horizontal, horizontalPadding)
-                        
-                        Spacer()
-                            .frame(height: isCompact ? 12 : 14)
-                        
-                        // Subscribe button
-                        Button(action: {
-                            Task {
-                                await purchaseSubscription()
-                            }
-                        }) {
-                            HStack(spacing: 8) {
-                                if isPurchasing {
-                                    CrownLoadingView(size: 18, tint: .white)
-                                }
-                                Text(isPurchasing ? "Processing..." : "Continue")
-                                    .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, isCompact ? 14 : 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(isPurchasing ? Color.gray : Color.black)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .padding(.horizontal, horizontalPadding)
-                        .disabled(isPurchasing)
-                        
-                        Spacer()
-                            .frame(height: isCompact ? 10 : 12)
-                        
-                        // Restore purchases
-                        Button(action: {
-                            Task {
-                                await subscriptionService.restorePurchases()
-                                if subscriptionService.isPremium {
-                                    onComplete?()
-                                }
-                            }
-                        }) {
-                            Text("Restore Purchases")
-                                .font(.system(size: isCompact ? 11 : 13, weight: .medium))
-                                .foregroundColor(.gray)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        Spacer()
-                            .frame(height: isCompact ? 6 : 8)
-                        
-                        // Terms and Privacy Links (Required by App Store)
-                        HStack(spacing: 4) {
-                            Link("Terms", destination: URL(string: APIConfig.termsOfUseURL)!)
-                            Text("·")
-                            Link("Privacy", destination: URL(string: APIConfig.privacyPolicyURL)!)
-                        }
-                        .font(.system(size: isCompact ? 9 : 10, weight: .regular))
-                        .tint(.gray.opacity(0.5))
-                        .foregroundStyle(.gray.opacity(0.5))
-                        .padding(.bottom, isCompact ? 16 : 20)
+                ZStack {
+                    Color.white
+                    
+                    ScrollView(.vertical, showsIndicators: false) {
+                        paywallContent(geometry: geometry, isCompact: isCompact, isVeryCompact: isVeryCompact, horizontalPadding: horizontalPadding)
+                            .frame(minHeight: geometry.size.height)
                     }
-                    .frame(minHeight: geometry.size.height)
+                    .scrollDisabled(geometry.size.height >= 750)
                 }
-                .scrollDisabled(geometry.size.height >= 750)
             }
+        } else {
+            // iOS 18 and below: Simple structure that fills parent
+            iOS18PaywallContent(
+                onComplete: onComplete,
+                selectedPlan: $selectedPlan,
+                withFreeTrial: $withFreeTrial,
+                isPurchasing: $isPurchasing,
+                subscriptionService: subscriptionService
+            )
+        }
+    }
+    
+    // MARK: - Paywall Content (shared between iOS versions)
+    @ViewBuilder
+    private func paywallContent(geometry: GeometryProxy, isCompact: Bool, isVeryCompact: Bool, horizontalPadding: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            Spacer()
+                .frame(height: isVeryCompact ? 20 : (isCompact ? 30 : 50))
+            
+            // Crown icon
+            Image("crown-icon")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: isVeryCompact ? 50 : (isCompact ? 55 : 65), height: isVeryCompact ? 50 : (isCompact ? 55 : 65))
+                .foregroundColor(.black)
+            
+            Spacer()
+                .frame(height: isVeryCompact ? 14 : (isCompact ? 16 : 24))
+            
+            // Title
+            Text("Unlock Scroll The Bible")
+                .font(.custom("Georgia", size: isVeryCompact ? 22 : (isCompact ? 24 : 28)))
+                .fontWeight(.regular)
+                .foregroundColor(.black)
+            
+            Spacer()
+                .frame(height: isVeryCompact ? 6 : (isCompact ? 8 : 10))
+            
+            // Subtitle
+            Text("Deeper study. Unlimited access.")
+                .font(.system(size: isVeryCompact ? 12 : (isCompact ? 13 : 15), weight: .medium))
+                .foregroundColor(.gray)
+                .tracking(0.5)
+            
+            Spacer()
+                .frame(height: isVeryCompact ? 18 : (isCompact ? 24 : 32))
+            
+            // Features list
+            VStack(spacing: isVeryCompact ? 10 : (isCompact ? 12 : 14)) {
+                FeatureRow(text: "AI-powered Bible study", isCompact: isCompact)
+                FeatureRow(text: "Explain It Easier button", isCompact: isCompact)
+                FeatureRow(text: "Cross-references & context", isCompact: isCompact)
+                FeatureRow(text: "Ad-free experience", isCompact: isCompact)
+            }
+            
+            Spacer()
+                .frame(height: isVeryCompact ? 16 : (isCompact ? 20 : 28))
+            
+            // Free trial toggle
+            FreeTrialToggle(withFreeTrial: $withFreeTrial, isCompact: isCompact)
+                .padding(.horizontal, horizontalPadding)
+            
+            Spacer()
+                .frame(height: isVeryCompact ? 12 : (isCompact ? 14 : 18))
+            
+            // Subscription options
+            VStack(spacing: isVeryCompact ? 8 : (isCompact ? 10 : 12)) {
+                // Yearly plan
+                SubscriptionOptionView(
+                    plan: .yearly,
+                    isSelected: selectedPlan == .yearly,
+                    withFreeTrial: withFreeTrial,
+                    isCompact: isCompact,
+                    onSelect: { selectedPlan = .yearly },
+                    getPrice: getPrice,
+                    getSavings: getSavings
+                )
+                
+                // Monthly plan
+                SubscriptionOptionView(
+                    plan: .monthly,
+                    isSelected: selectedPlan == .monthly,
+                    withFreeTrial: withFreeTrial,
+                    isCompact: isCompact,
+                    onSelect: { selectedPlan = .monthly },
+                    getPrice: getPrice,
+                    getSavings: getSavings
+                )
+                
+                // No commitment text
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: isVeryCompact ? 9 : (isCompact ? 10 : 12), weight: .medium))
+                        .foregroundColor(.gray)
+                    
+                    Text("No commitment · Cancel anytime")
+                        .font(.system(size: isVeryCompact ? 9 : (isCompact ? 10 : 12), weight: .regular))
+                        .foregroundColor(.gray)
+                }
+                .padding(.top, isVeryCompact ? 2 : (isCompact ? 2 : 4))
+            }
+            .padding(.horizontal, horizontalPadding)
+            
+            Spacer()
+                .frame(height: isVeryCompact ? 10 : (isCompact ? 12 : 14))
+            
+            // Subscribe button
+            Button(action: {
+                Task {
+                    await purchaseSubscription()
+                }
+            }) {
+                HStack(spacing: 8) {
+                    if isPurchasing {
+                        CrownLoadingView(size: 18, tint: .white)
+                    }
+                    Text(isPurchasing ? "Processing..." : "Continue")
+                        .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 17), weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, isVeryCompact ? 12 : (isCompact ? 14 : 16))
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(isPurchasing ? Color.gray : Color.black)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, horizontalPadding)
+            .disabled(isPurchasing)
+            
+            Spacer()
+                .frame(height: isVeryCompact ? 8 : (isCompact ? 10 : 12))
+            
+            // Restore purchases
+            Button(action: {
+                Task {
+                    await subscriptionService.restorePurchases()
+                    if subscriptionService.isPremium {
+                        onComplete?()
+                    }
+                }
+            }) {
+                Text("Restore Purchases")
+                    .font(.system(size: isVeryCompact ? 10 : (isCompact ? 11 : 13), weight: .medium))
+                    .foregroundColor(.gray)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            Spacer()
+                .frame(height: isVeryCompact ? 4 : (isCompact ? 6 : 8))
+            
+            // Terms and Privacy Links (Required by App Store)
+            HStack(spacing: 4) {
+                Link("Terms", destination: URL(string: APIConfig.termsOfUseURL)!)
+                Text("·")
+                Link("Privacy", destination: URL(string: APIConfig.privacyPolicyURL)!)
+            }
+            .font(.system(size: isVeryCompact ? 8 : (isCompact ? 9 : 10), weight: .regular))
+            .tint(.gray.opacity(0.5))
+            .foregroundStyle(.gray.opacity(0.5))
+            .padding(.bottom, isVeryCompact ? 12 : (isCompact ? 16 : 20))
         }
     }
     
@@ -1219,6 +1251,234 @@ struct PaywallView: View {
         case .monthly: return nil
         case .yearly: return withTrial ? "Save 50%" : "Save 58%"
         }
+    }
+}
+
+// MARK: - iOS 18 Paywall Content (Simplified structure without GeometryReader issues)
+struct iOS18PaywallContent: View {
+    var onComplete: (() -> Void)?
+    @Binding var selectedPlan: PaywallView.SubscriptionPlan
+    @Binding var withFreeTrial: Bool
+    @Binding var isPurchasing: Bool
+    var subscriptionService: SubscriptionService
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
+            let isVeryCompact = geometry.size.height < 650
+            let horizontalPadding: CGFloat = min(32, geometry.size.width * 0.08)
+            
+            Color.white
+                .ignoresSafeArea()
+                .overlay(
+                    VStack(spacing: 0) {
+                        // Top spacing for iOS 18
+                        Spacer()
+                            .frame(height: isVeryCompact ? 100 : (isCompact ? 120 : 140))
+                        
+                        // Crown icon
+                        Image("crown-icon")
+                            .renderingMode(.template)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: isVeryCompact ? 45 : (isCompact ? 50 : 60), height: isVeryCompact ? 45 : (isCompact ? 50 : 60))
+                            .foregroundColor(.black)
+                        
+                        Spacer().frame(height: isVeryCompact ? 12 : (isCompact ? 14 : 20))
+                        
+                        // Title
+                        Text("Unlock Scroll The Bible")
+                            .font(.custom("Georgia", size: isVeryCompact ? 20 : (isCompact ? 22 : 26)))
+                            .fontWeight(.regular)
+                            .foregroundColor(.black)
+                        
+                        Spacer().frame(height: isVeryCompact ? 4 : (isCompact ? 6 : 8))
+                        
+                        // Subtitle
+                        Text("Deeper study. Unlimited access.")
+                            .font(.system(size: isVeryCompact ? 11 : (isCompact ? 12 : 14), weight: .medium))
+                            .foregroundColor(.gray)
+                            .tracking(0.5)
+                        
+                        Spacer().frame(height: isVeryCompact ? 14 : (isCompact ? 18 : 24))
+                        
+                        // Features list
+                        VStack(spacing: isVeryCompact ? 8 : (isCompact ? 10 : 12)) {
+                            iOS18FeatureRow(text: "AI-powered Bible study", isCompact: isCompact, isVeryCompact: isVeryCompact)
+                            iOS18FeatureRow(text: "Explain It Easier button", isCompact: isCompact, isVeryCompact: isVeryCompact)
+                            iOS18FeatureRow(text: "Cross-references & context", isCompact: isCompact, isVeryCompact: isVeryCompact)
+                            iOS18FeatureRow(text: "Ad-free experience", isCompact: isCompact, isVeryCompact: isVeryCompact)
+                        }
+                        
+                        Spacer().frame(height: isVeryCompact ? 14 : (isCompact ? 18 : 24))
+                        
+                        // Free trial toggle
+                        FreeTrialToggle(withFreeTrial: $withFreeTrial, isCompact: isCompact)
+                            .padding(.horizontal, horizontalPadding)
+                        
+                        Spacer().frame(height: isVeryCompact ? 10 : (isCompact ? 12 : 16))
+                        
+                        // Subscription options
+                        VStack(spacing: isVeryCompact ? 8 : (isCompact ? 10 : 12)) {
+                            SubscriptionOptionView(
+                                plan: .yearly,
+                                isSelected: selectedPlan == .yearly,
+                                withFreeTrial: withFreeTrial,
+                                isCompact: isCompact,
+                                onSelect: { selectedPlan = .yearly },
+                                getPrice: getPrice,
+                                getSavings: getSavings
+                            )
+                            
+                            SubscriptionOptionView(
+                                plan: .monthly,
+                                isSelected: selectedPlan == .monthly,
+                                withFreeTrial: withFreeTrial,
+                                isCompact: isCompact,
+                                onSelect: { selectedPlan = .monthly },
+                                getPrice: getPrice,
+                                getSavings: getSavings
+                            )
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.shield.fill")
+                                    .font(.system(size: isVeryCompact ? 9 : (isCompact ? 10 : 11), weight: .medium))
+                                    .foregroundColor(.gray)
+                                
+                                Text("No commitment · Cancel anytime")
+                                    .font(.system(size: isVeryCompact ? 9 : (isCompact ? 10 : 11), weight: .regular))
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.top, 2)
+                        }
+                        .padding(.horizontal, horizontalPadding)
+                        
+                        Spacer().frame(height: isVeryCompact ? 10 : (isCompact ? 12 : 14))
+                        
+                        // Subscribe button
+                        Button(action: {
+                            Task {
+                                await purchaseSubscription()
+                            }
+                        }) {
+                            HStack(spacing: 8) {
+                                if isPurchasing {
+                                    CrownLoadingView(size: 16, tint: .white)
+                                }
+                                Text(isPurchasing ? "Processing..." : "Continue")
+                                    .font(.system(size: isVeryCompact ? 14 : (isCompact ? 15 : 16), weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, isVeryCompact ? 12 : (isCompact ? 13 : 14))
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(isPurchasing ? Color.gray : Color.black)
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.horizontal, horizontalPadding)
+                        .disabled(isPurchasing)
+                        
+                        Spacer().frame(height: isVeryCompact ? 8 : (isCompact ? 10 : 12))
+                        
+                        // Restore purchases
+                        Button(action: {
+                            Task {
+                                await subscriptionService.restorePurchases()
+                                if subscriptionService.isPremium {
+                                    onComplete?()
+                                }
+                            }
+                        }) {
+                            Text("Restore Purchases")
+                                .font(.system(size: isVeryCompact ? 10 : (isCompact ? 11 : 12), weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        Spacer().frame(height: isVeryCompact ? 4 : (isCompact ? 6 : 8))
+                        
+                        // Terms and Privacy
+                        HStack(spacing: 4) {
+                            Link("Terms", destination: URL(string: APIConfig.termsOfUseURL)!)
+                            Text("·")
+                            Link("Privacy", destination: URL(string: APIConfig.privacyPolicyURL)!)
+                        }
+                        .font(.system(size: isVeryCompact ? 8 : (isCompact ? 9 : 10), weight: .regular))
+                        .tint(.gray.opacity(0.5))
+                        .foregroundStyle(.gray.opacity(0.5))
+                        
+                        Spacer()
+                    }
+                )
+        }
+    }
+    
+    private func purchaseSubscription() async {
+        let currentPlan = selectedPlan
+        let currentTrial = withFreeTrial
+        
+        isPurchasing = true
+        
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+        
+        guard let product = subscriptionService.getProduct(
+            yearly: currentPlan == .yearly,
+            withTrial: currentTrial
+        ) else {
+            isPurchasing = false
+            return
+        }
+        
+        let success = await subscriptionService.purchase(product)
+        
+        isPurchasing = false
+        if success {
+            onComplete?()
+        }
+    }
+    
+    private func getPrice(for plan: PaywallView.SubscriptionPlan, withTrial: Bool) -> String {
+        if let product = subscriptionService.getProduct(yearly: plan == .yearly, withTrial: withTrial) {
+            return product.displayPrice
+        }
+        switch (plan, withTrial) {
+        case (.monthly, false): return "$3.99"
+        case (.monthly, true): return "$4.99"
+        case (.yearly, false): return "$19.99"
+        case (.yearly, true): return "$29.99"
+        }
+    }
+    
+    private func getSavings(for plan: PaywallView.SubscriptionPlan, withTrial: Bool) -> String? {
+        switch plan {
+        case .monthly: return nil
+        case .yearly: return withTrial ? "Save 50%" : "Save 58%"
+        }
+    }
+}
+
+// MARK: - iOS 18 Feature Row
+struct iOS18FeatureRow: View {
+    let text: String
+    var isCompact: Bool = false
+    var isVeryCompact: Bool = false
+    
+    var body: some View {
+        HStack(spacing: isVeryCompact ? 8 : (isCompact ? 10 : 12)) {
+            Image(systemName: "checkmark")
+                .font(.system(size: isVeryCompact ? 9 : (isCompact ? 10 : 11), weight: .bold))
+                .foregroundColor(.black)
+            
+            Text(text)
+                .font(.system(size: isVeryCompact ? 12 : (isCompact ? 13 : 14), weight: .regular))
+                .foregroundColor(.black.opacity(0.8))
+            
+            Spacer()
+        }
+        .padding(.horizontal, isVeryCompact ? 36 : (isCompact ? 40 : 46))
     }
 }
 
